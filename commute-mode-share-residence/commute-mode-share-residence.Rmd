@@ -1,0 +1,55 @@
+---
+title: "Commute Mode Share -- Residence"
+author: "David Ory"
+output:
+  html_document:
+    theme: cosmo
+    toc: yes
+---
+
+## Administration
+
+#### Purpose
+Consume the Census ACS data for commute mode share by residence location for various geographies and create the flat files needed by Vital Signs. 
+
+#### _ISSUES_
+1.  
+
+#### _TODO_
+1.  Everything, early days
+
+## Overhead
+
+#### Libraries
+```{r overhead}
+library(knitr)
+suppressMessages(library(dplyr))
+library(RCurl)
+```
+
+#### Knitr config
+```{r config, include=FALSE}
+knitr::opts_chunk$set(cache=TRUE)
+```
+
+#### Parameters
+```{r parameters}
+#key = ""
+
+```
+
+#### API Calls
+```{r api-calls}
+DEMO_CALL = paste("http://api.census.gov/data/2013/acs1/profile?get=NAME,DP02_0001E&for=county:*&in=state:06&key=", key, sep = "")
+COUNTY_CALL = paste("http://api.census.gov/data/2013/acs1/concept?get=NAME,B08101_44E&in:0500000US06001&key=", 
+                    key,  sep = "")
+
+```
+
+
+#### Consume data via Census API via acs package
+```{r data-consume}
+TEST <- read.csv(textConnection(getURL(COUNTY_CALL)))
+TEST
+```
+
