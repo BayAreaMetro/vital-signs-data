@@ -25,6 +25,7 @@ Consume the Census ACS data for commute mode share by residence location for var
 library(knitr)
 suppressMessages(library(dplyr))
 library(RCurl)
+library(RJSONIO)
 ```
 
 #### Knitr config
@@ -34,14 +35,14 @@ knitr::opts_chunk$set(cache=TRUE)
 
 #### Parameters
 ```{r parameters}
-#key = ""
+#key=
 
 ```
 
 #### API Calls
 ```{r api-calls}
 DEMO_CALL = paste("http://api.census.gov/data/2013/acs1/profile?get=NAME,DP02_0001E&for=county:*&in=state:06&key=", key, sep = "")
-COUNTY_CALL = paste("http://api.census.gov/data/2013/acs1/concept?get=NAME,B08101_44E&in:0500000US06001&key=", 
+COUNTY_CALL = paste("http://api.census.gov/data/2013/acs1?get=B08101,CATEGORY&for=county:*&in=state:06&key=", 
                     key,  sep = "")
 
 ```
@@ -49,7 +50,16 @@ COUNTY_CALL = paste("http://api.census.gov/data/2013/acs1/concept?get=NAME,B0810
 
 #### Consume data via Census API via acs package
 ```{r data-consume}
-TEST <- read.csv(textConnection(getURL(COUNTY_CALL)))
-TEST
+data <- fromJSON(DEMO_CALL)
+data <- data[2:length(data)]
+data_county <- sapply(data, function(x) x[1])
+data_number <- sapply(data, function(x) x[2])
+data_frame <- data.frame(data_county, data_number)
+names(data_frame) <-  c("county", "number")
+
+data_2 <- fromJSON(COUNTY_CALL)
+
+
+
 ```
 
