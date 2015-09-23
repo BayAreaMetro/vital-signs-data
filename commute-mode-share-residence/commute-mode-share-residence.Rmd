@@ -36,28 +36,84 @@ knitr::opts_chunk$set(cache=TRUE)
 #### Parameters
 ```{r parameters}
 #key=
+one_year_ACS="2014"
+
 
 ```
 
 #### API Calls
 ```{r api-calls}
-DEMO_CALL = paste("http://api.census.gov/data/2013/acs1/profile?get=NAME,DP02_0001E&for=county:*&in=state:06&key=", key, sep = "")
-COUNTY_CALL = paste("http://api.census.gov/data/2013/acs1?get=B08101,CATEGORY&for=county:*&in=state:06&key=", 
-                    key,  sep = "")
+COMMUTE_MODE = paste("http://api.census.gov/data/",one_year_ACS,"/acs1?get=NAME,B08301_003E,B08301_004E,B08301_010E,B08301_019E,B08301_018E,B08301_016E,B08301_017E,B08301_020E,B08301_021E,B08301_001E&in=state:06&for=county:01,13,41,55,75,81,85,95,97&key=", key, sep = "")
+
+TRAVEL_TIME = paste("http://api.census.gov/data/2014/acs1?get=NAME,B08013_001E&in=state:06&for=county:01,13,41,55,75,81,85,95,97&key=", key,  sep = "")
 
 ```
 
 
 #### Consume data via Census API via acs package
-```{r data-consume}
-data <- fromJSON(DEMO_CALL)
-data <- data[2:length(data)]
-data_county <- sapply(data, function(x) x[1])
-data_number <- sapply(data, function(x) x[2])
-data_frame <- data.frame(data_county, data_number)
-names(data_frame) <-  c("county", "number")
+```{r data - consume commute data}
+mode <- fromJSON(COMMUTE_MODE)
+mode <- mode[2:length(mode)]
+county <- sapply(mode, function(x) x[1])
+drive_alone <- sapply(mode, function(x) as.numeric(x[2]))
+carpool <- sapply(mode, function(x) as.numeric(x[3]))
+transit <- sapply(mode, function(x) as.numeric(x[4]))
+walk <- sapply(mode, function(x) as.numeric(x[5]))
+bike <- sapply(mode, function(x) as.numeric(x[6]))
+taxi <- sapply(mode, function(x) as.numeric(x[7]))
+motorcycle <- sapply(mode, function(x) as.numeric(x[8]))
+other <- sapply(mode, function(x) as.numeric(x[9]))
+athome <- sapply(mode, function(x) as.numeric(x[10]))
+total <- sapply(mode, function(x) as.numeric(x[11]))
+mode_frame <- data.frame(county, drive_alone, carpool, transit, walk, bike, taxi, motorcycle, other, athome, total)
+names(mode_frame) <-  c("County", "Drive Alone", "Carpool", "Transit", "Walk", "Bike", "Taxi", "Motorcycle", "Other", "AtHome", "Total")
 
-data_2 <- fromJSON(COUNTY_CALL)
+```
+
+
+```{r}
+
+mode_frame <- mode_frame %>%
+  mutate (othertot = taxi + motorcycle + other) %>%
+  mutate (share_DA = drive_alone / total)
+
+share_frame <- mode_frame %>%
+  select(county, share_drive_alone=share_DA, share_carpool)
+  
+
+```
+
+```{r mode - create mode share data frame}
+othertot=taxi+motorcycle+other
+share_DA=drive_alone/total
+share_carpool=carpool/total
+share_transit=transit/total
+share_walk=walk/total
+share_bike=bike/total
+share_othertot=othertot/total
+share_athome=athome/total
+share_total=share_DA+share_carpool+share_transit+share_walk+share_bike+share_othertot+share_athome
+
+share_frame <- data.frame (county, share_DA, share_carpool, share_transit, share_walk, share_bike, share_othertot, share_athome, share_total)
+
+```
+
+
+```{r mode - consume travel time data}
+travel_time <- fromJSON(TRAVEL_TIME)
+travel_time <- travel_time[2:length(travel_time)]
+aggregate_time <- sapply(travel_time, function(x) as.numeric(x[2]))
+time_frame <- data.frame(county, aggregate_time, total, athome)
+time_frame <- mutate (time_frame, nothome=total-athome)
+time_frame <- mutate (time_frame, mean_commute=aggregate_time/nothome)
+
+
+write.csv(share_frame , paste(D_OUTPUT_TABLEAU, "AgeCats.csv", sep = ""), row.names = FALSE, quote = T)
+
+
+#typeof(athome)
+#help(mode)
+#(as.numeric(athome))
 
 
 
