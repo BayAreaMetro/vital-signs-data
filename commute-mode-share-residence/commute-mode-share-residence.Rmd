@@ -1,6 +1,6 @@
 ---
-title: "Commute Mode Share -- Residence"
-author: "David Ory"
+title: "Commute Mode Share and Mean Travel Time -- Residence"
+author: "Shimon Israel"
 output:
   html_document:
     theme: cosmo
@@ -10,7 +10,7 @@ output:
 ## Administration
 
 #### Purpose
-Consume the Census ACS data for commute mode share by residence location for various geographies and create the flat files needed by Vital Signs. 
+Consume the Census ACS data for commute mode share and mean travel time by residence location for county geographies and create the flat files needed by Vital Signs. 
 
 #### _ISSUES_
 1.  
@@ -26,6 +26,8 @@ library(knitr)
 suppressMessages(library(dplyr))
 library(RCurl)
 library(RJSONIO)
+library(reshape2)
+
 ```
 
 #### Knitr config
@@ -35,85 +37,206 @@ knitr::opts_chunk$set(cache=TRUE)
 
 #### Parameters
 ```{r parameters}
-#key=
+#key= 
 one_year_ACS="2014"
-
-
+city="00562,00674,01640,02252,03092,05108,05164,05290,06000,08142,08310,09066,09892,10345,13882,14190,14736,16000,16462,16560,17610,17918,17988,19402,20018,20956,21796,22594,23168,23182,25338,26000,29504,31708,33000,33056,33308,33798,39122,40438,41992,43280,43294,44112,46114,46870,47710,47486,47766,48956,49187,49278,49670,50258,50916,52582,53000,53070,54232,54806,55282,56784,56938,57288,57456,57764,57792,58380,60102,60620,60984,62546,62980,64434,65028,65070,67000,68000,68084,68252,68294,68364,68378,69084,70098,70280,70364,70770,72646,73262,64140,75630,77000,78666,81204,81554,81666,83346,85922,86440,86930"
+county="01,13,41,55,75,81,85,95,97"
+state="06"
+metro="37980,47900,26420,33100,31080,16980,19100,35620,12060"
+source1="B08301_ACS14_1YR"
+source1="B08013_ACS14_1YR"
+source3="B08136_ACS14_1YR"
+share_output_csv=paste("C:/Users/sisrae.MTC/Box Sync/Data/1A_Transportation/T1_Commute Mode Share (Home)/",one_year_ACS,"/",one_year_ACS,"_",sep = "")
 ```
 
-#### API Calls
+#### Mode Share API Calls
 ```{r api-calls}
-COMMUTE_MODE = paste("http://api.census.gov/data/",one_year_ACS,"/acs1?get=NAME,B08301_003E,B08301_004E,B08301_010E,B08301_019E,B08301_018E,B08301_016E,B08301_017E,B08301_020E,B08301_021E,B08301_001E&in=state:06&for=county:01,13,41,55,75,81,85,95,97&key=", key, sep = "")
+COMMUTE_COUNTY = paste("http://api.census.gov/data/",one_year_ACS,"/acs1?get=NAME,B08301_001E,B08301_002E,B08301_003E,B08301_004E,B08301_010E,B08301_019E,B08301_018E,B08301_016E,B08301_017E,B08301_020E,B08301_021E&in=state:",state,"&for=county:",county,"&key=", key, sep = "")
 
-TRAVEL_TIME = paste("http://api.census.gov/data/2014/acs1?get=NAME,B08013_001E&in=state:06&for=county:01,13,41,55,75,81,85,95,97&key=", key,  sep = "")
+COMMUTE_CITY = paste("http://api.census.gov/data/",one_year_ACS,"/acs1?get=NAME,B08301_001E,B08301_002E,B08301_003E,B08301_004E,B08301_010E,B08301_019E,B08301_018E,B08301_016E,B08301_017E,B08301_020E,B08301_021Ein=state:",state,"&for=place:",city,"&key=", key, sep = "")
 
+COMMUTE_METRO = paste("http://api.census.gov/data/",one_year_ACS,"/acs1?get=NAME,B08301_001E,B08301_002E,B08301_003E,B08301_004E,B08301_010E,B08301_019E,B08301_018E,B08301_016E,B08301_017E,B08301_020E,B08301_021E&for=metropolitan+statistical+area/micropolitan+statistical+area:",metro,"&key=", key, sep = "")
 ```
 
+#### Travel Time Total API Calls
+```{r api-calls}
 
-#### Consume data via Census API via acs package
-```{r data - consume commute data}
-mode <- fromJSON(COMMUTE_MODE)
-mode <- mode[2:length(mode)]
-county <- sapply(mode, function(x) x[1])
-drive_alone <- sapply(mode, function(x) as.numeric(x[2]))
-carpool <- sapply(mode, function(x) as.numeric(x[3]))
-transit <- sapply(mode, function(x) as.numeric(x[4]))
-walk <- sapply(mode, function(x) as.numeric(x[5]))
-bike <- sapply(mode, function(x) as.numeric(x[6]))
-taxi <- sapply(mode, function(x) as.numeric(x[7]))
-motorcycle <- sapply(mode, function(x) as.numeric(x[8]))
-other <- sapply(mode, function(x) as.numeric(x[9]))
-athome <- sapply(mode, function(x) as.numeric(x[10]))
-total <- sapply(mode, function(x) as.numeric(x[11]))
-mode_frame <- data.frame(county, drive_alone, carpool, transit, walk, bike, taxi, motorcycle, other, athome, total)
-names(mode_frame) <-  c("County", "Drive Alone", "Carpool", "Transit", "Walk", "Bike", "Taxi", "Motorcycle", "Other", "AtHome", "Total")
-
+TIME_COUNTY = paste("http://api.census.gov/data/",one_year_ACS,"/acs1?get=NAME,B08013_001E&in=state:",state,"&for=county:",county,"&key=", key, sep = "")
 ```
 
+#### Consume county commute mode data via Census API via acs package
+```{r data - consume commute mode data}
+county_mode <- fromJSON(COMMUTE_COUNTY)
+county_mode <- county_mode[2:length(county_mode)]
 
-```{r}
+county_field <- sapply (county_mode, function(x) x[1])
+county_mode_frame <- data.frame(county_field, one_year_ACS, stringsAsFactors=F)
 
-mode_frame <- mode_frame %>%
-  mutate (othertot = taxi + motorcycle + other) %>%
-  mutate (share_DA = drive_alone / total)
-
-share_frame <- mode_frame %>%
-  select(county, share_drive_alone=share_DA, share_carpool)
+for (i in 2:12){
+  column <- sapply(county_mode, function(x) as.numeric(x[i]))
   
+  county_mode_frame <- cbind(county_mode_frame, data.frame(column))
+}
+
+  county_mode_frame <- cbind(county_mode_frame, source1)
+
+names(county_mode_frame) <-  c("Residence_Geo", "Year", "Workers_Est", "Drive_Total","DAWorkers_Est", "CPWorkers_Est", "PTWorkers_Est", "Walk", "Bike", "Taxi", "Motorcycle", "Other", "AtHome", "Source")
+
+bay_mode_frame <- county_mode_frame %>%
+   summarize(
+     Residence_Geo="Bay Area", 
+     Year=one_year_ACS,
+     Workers_Est = sum(Workers_Est),
+     Drive_Total = sum(Drive_Total),
+     DAWorkers_Est = sum(DAWorkers_Est),
+     CPWorkers_Est = sum(CPWorkers_Est),
+     PTWorkers_Est = sum(PTWorkers_Est),
+     Walk = sum(Walk),
+     Bike = sum(Bike),
+     Taxi = sum(Taxi),
+     Motorcycle = sum(Motorcycle),
+     Other = sum(Other),
+     AtHome = sum(AtHome),
+     Source=source1             
+             )
+
+#county_mode_frame <- rbind(county_mode_frame,bay_mode_frame)
+
+
 
 ```
 
-```{r mode - create mode share data frame}
-othertot=taxi+motorcycle+other
-share_DA=drive_alone/total
-share_carpool=carpool/total
-share_transit=transit/total
-share_walk=walk/total
-share_bike=bike/total
-share_othertot=othertot/total
-share_athome=athome/total
-share_total=share_DA+share_carpool+share_transit+share_walk+share_bike+share_othertot+share_athome
 
-share_frame <- data.frame (county, share_DA, share_carpool, share_transit, share_walk, share_bike, share_othertot, share_athome, share_total)
 
+```{r data - create county mode share data}
+county_mode_frame <- county_mode_frame %>%
+  mutate (Othertot = Taxi + Motorcycle + Other) %>%
+  mutate (Other_w_Bike = Othertot+Bike) %>%
+  mutate (DriveTot_Est = Drive_Total / Workers_Est) %>%
+  mutate (DriveAlone_Est = DAWorkers_Est / Workers_Est) %>%
+  mutate (Carpool_Est = CPWorkers_Est / Workers_Est) %>%
+  mutate (Transit_Est = PTWorkers_Est / Workers_Est) %>%
+  mutate (Walk_Est = Walk / Workers_Est) %>%
+  mutate (Other_w_Bike_Est = Other_w_Bike / Workers_Est) %>%
+  mutate (Bike_Est = Bike / Workers_Est) %>%
+  mutate (Other_Est = Othertot / Workers_Est) %>%
+  mutate (Telework_Est = AtHome / Workers_Est)  
+```
+
+```{r data - create new data frame for county mode share}
+county_share_frame <- county_mode_frame %>%
+  select (Residence_Geo, Year, Workers_Est, DriveTot_Est, DriveAlone_Est, Carpool_Est, Transit_Est, Walk_Est, Other_w_Bike_Est, Bike_Est, Other_Est, Telework_Est, Source)
+
+trial <- (melt(county_share_frame, 
+              id.vars=c("Residence_Geo","Year", "Workers_Est", "Source"),
+              variable.name="Transport_Mode",
+              value.name="Share"
+              ))[c(1,2,3,5,6,4)]
+ 
+write.csv(county_share_frame , paste(share_output_csv, "County_Mode_Share.csv", sep = ""), row.names = FALSE, quote = T)
 ```
 
 
+
+#### Consume metro commute mode data via Census API via acs package
+```{r data - consume commute mode data}
+metro_mode <- fromJSON(COMMUTE_METRO)
+metro_mode <- metro_mode[2:length(metro_mode)]
+
+metro_field <- sapply(metro_mode, function(x) x[1])
+metro_mode_frame <- data.frame(metro_field, one_year_ACS)
+
+for (i in 2:12){
+  column <- sapply(metro_mode, function(x) as.numeric(x[i]))
+  
+  metro_mode_frame <- cbind(metro_mode_frame, data.frame(column))
+}
+
+  metro_mode_frame <- cbind(metro_mode_frame, source1)
+
+names(metro_mode_frame) <-  c("Residence_Geo", "Year", "Workers_Est", "Drive_Total","DAWorkers_Est", "CPWorkers_Est", "PTWorkers_Est", "Walk", "Bike", "Taxi", "Motorcycle", "Other", "AtHome", "Source")
+```
+
+
+```{r data - create metro mode share data}
+metro_mode_frame <- metro_mode_frame %>%
+  mutate (Othertot = Taxi + Motorcycle + Other) %>%
+  mutate (Other_w_Bike = Othertot+Bike) %>%
+  mutate (DriveTot_Est = Drive_Total / Workers_Est) %>%
+  mutate (DriveAlone_Est = DAWorkers_Est / Workers_Est) %>%
+  mutate (Carpool_Est = CPWorkers_Est / Workers_Est) %>%
+  mutate (Transit_Est = PTWorkers_Est / Workers_Est) %>%
+  mutate (Walk_Est = Walk / Workers_Est) %>%
+  mutate (Other_w_Bike_Est = Other_w_Bike / Workers_Est) %>%
+  mutate (Bike_Est = Bike / Workers_Est) %>%
+  mutate (Other_Est = Othertot / Workers_Est) %>%
+  mutate (Telework_Est = AtHome / Workers_Est)  
+```
+
+```{r data - create new data frame for metro mode share}
+metro_share_frame <- metro_mode_frame %>%
+  select (Residence_Geo, Year, Workers_Est, DriveTot_Est, DriveAlone_Est, Carpool_Est, Transit_Est, Walk_Est, Other_w_Bike_Est, Bike_Est, Other_Est, Telework_Est, Source)
+
+sub("*-","*",metro_share_frame.Residence_Geo)
+
+trial_share_frame <- rbind(metro_share_frame,county_share_frame)
+ 
+write.csv(metro_share_frame , paste(share_output_csv, "Metro_Mode_Share.csv", sep = ""), row.names = FALSE, quote = T)
+```
+
+#### Consume commute travel time data via Census API via acs package
 ```{r mode - consume travel time data}
 travel_time <- fromJSON(TRAVEL_TIME)
 travel_time <- travel_time[2:length(travel_time)]
-aggregate_time <- sapply(travel_time, function(x) as.numeric(x[2]))
-time_frame <- data.frame(county, aggregate_time, total, athome)
-time_frame <- mutate (time_frame, nothome=total-athome)
-time_frame <- mutate (time_frame, mean_commute=aggregate_time/nothome)
+
+for (i in 2:5){
+  column <- sapply(travel_time, function(x) as.numeric(x[i]))
+  
+  aggregate_time <- cbind(time_frame, data.frame(column))
+}
+
+time_frame <- data.frame(aggregate_time)
+time_frame <- mode_frame %>%
+  select (Residence_Geo, Year, Workers_Est, DAWorkers_Est, CPWorkers_Est, PTWorkers, AtHome)
+time_frame <- mutate (time_frame, NotHome = Workers_Est-AtHome)
+time_frame <- mutate (time_frame, mean_commute=aggregate_time/NotHome)
 
 
-write.csv(share_frame , paste(D_OUTPUT_TABLEAU, "AgeCats.csv", sep = ""), row.names = FALSE, quote = T)
+write.csv(time_frame , paste(f_output_csv, "Mean_Travel_Time.csv", sep = ""), row.names = FALSE, quote = T)
+```
+
+mode <- fromJSON(COMMUTE_MODE)
+mode <- mode[2:length(mode)]
+
+county <- sapply(mode, function(x) x[1])
+mode_frame <- data.frame(county, one_year_ACS)
+
+for (i in 2:12){
+  column <- sapply(mode, function(x) as.numeric(x[i]))
+  
+  mode_frame <- cbind(mode_frame, data.frame(column))
+}
+
+  mode_frame <- cbind(mode_frame, source1)
+
+names(mode_frame) <-  c("Residence_Geo", "Year", "Workers_Est", "Drive_Total","Drive_Alone", "Carpool", "Transit", "Walk", "Bike", "Taxi", "Motorcycle", "Other", "AtHome", "Source")
 
 
-#typeof(athome)
-#help(mode)
-#(as.numeric(athome))
+
+a <- strsplit(as.character(metro_share_frame$Residence_Geo),'-')
+cities <- sapply(a,function(x) x[1])
+metro_mode_share$cityname <- cities
+
+help(vector)
+c(Residence_Geo="bayarea",sapply(county_mode_frame[,3:7],function(x) sum(x)))
+
+
+```{r - reformat data into format for Vital Signs}
+
+for (i in 1:nrow(county_share_frame))  {
+   trial <- (county_share_frame[i,2])
+}
+
 
 
 
