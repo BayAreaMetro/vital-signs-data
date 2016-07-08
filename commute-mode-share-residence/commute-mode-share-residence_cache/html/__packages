@@ -1,0 +1,12 @@
+base
+bitops
+datasets
+dplyr
+graphics
+grDevices
+knitr
+methods
+RCurl
+RJSONIO
+stats
+utils
