@@ -26,8 +26,11 @@ work_output_csv=paste0("C:/Users/sisrae.MTC/Box Sync/Data/2A_Economy/EC5_Income 
 
 # Import census API data for income and earnings for county and metro of work, respectively.
 
-county_url <- paste0("http://api.census.gov/data/",ACS_year,"/acs",ACS_product,"?get=NAME,B19013_001E,B08521_001E&in=state:06&for=county:",county,"&key=",key)
-metro_url <- paste0("http://api.census.gov/data/",ACS_year,"/acs",ACS_product,"?get=NAME,B19013_001E,B08521_001E&for=metropolitan+statistical+area/micropolitan+statistical+area:",metro,"&key=",key)
+county_url <- paste0("http://api.census.gov/data/",ACS_year,"/acs",
+  ACS_product,"?get=NAME,B19013_001E,B19013_001M,B08521_001E,B08521_001M,B25009_001E,B08604_001E&in=state:06&for=county:",county,"&key=",key)
+metro_url <- paste0("http://api.census.gov/data/",ACS_year,"/acs",
+  ACS_product,"?get=NAME,B19013_001E,B19013_001M,B08521_001E,B08521_001M&for=metropolitan+statistical+area/micropolitan+statistical+area:",
+  metro,"&key=",key)
 
 # Function for bringing in data
 # Put API data into list file
@@ -61,14 +64,29 @@ income_county <- f.income(county_url)
 
 income_metro <- f.income(metro_url)
 
+trial<-income_county %>%
+  mutate (trial=as.numeric(B25009_001E))
+
 # For counties - append geography variables, apply source variables, separate residence and workplace files, and rename some variables
 
-income_county$Geo <- sapply((strsplit(as.character(income_county$NAME),',')),function(x) x[1])
-income_county$Year <- ACS_year
-income_county$Median_Income <- income_county$B19013_001E
-income_county$Median_Earnings <- income_county$B08521_001E
-income_county$Residence_Source <- source_residence
-income_county$Work_Source <- source_work
+income_county <- income_county %>% mutate (
+  Geo=sapply((strsplit(as.character(income_county$NAME),',')),function(x) x[1]),
+  Year=ACS_year,
+  Median_Income = as.numeric(B19013_001E),
+  Median_Income_MOE = as.numeric (B19013_001M),
+  Median_Earnings = as.numeric(B08521_001E),
+  Median_Earnings_MOE = as.numeric(B08521_001M),
+  Households = as.numeric(B25009_001E),
+  Workers = as.numeric(B08604_001E),
+  Income_x_Households = Median_Income*Households,
+  Residence_Source = source_residence,
+  Work_Source = source_work
+  )
+
+bay_median = as.integer(sum(income_county$Income_x_Households)/sum(income_county$Households))
+
+metro <- rbind(income_metro,"10" = c("Bay Area", bay_median,2,3,4,5, "NA"))
+
 
 residence_income_county <- income_county %>% 
   select(Geo, Median_Income, Residence_Source)
@@ -99,45 +117,13 @@ workplace_earnings_metro <- income_metro %>%
 names(workplace_earnings)[1]<-"Workplace_Geo"
 names(workplace_earnings)[3]<-"Source"
 
+
+
+
 # Write out CSV 
 
 #write.csv(residence_income , paste0(residence_output_csv, "5Year_Residence_City_Income.csv"), row.names = FALSE, quote = T)
 #write.csv(workplace_earnings , paste0(work_output_csv, "5Year_Workplace_City_Earnings.csv"), row.names = FALSE, quote = T)
-
-
-
-
-
-
-
-
-response_county <- content(GET(county_url))
-response_metro <- content(GET(metro_url))
-
-
-
-income.f <- function(url){  
-  furl <- content(GET(url))
-  for (i in 1:length(furl)){
-    if (i==1) header <- furl [[i]]
-    if (i==2){
-      temp <- lapply(furl[[i]], function(x) ifelse(is.null(x), NA, x))
-      income <- data.frame(temp, stringsAsFactors=FALSE)
-      names (income) <- header
-    }
-    if (i>2){
-      temp <- lapply(furl[[i]], function(x) ifelse(is.null(x), NA, x))
-      tempdf <- data.frame(temp, stringsAsFactors=FALSE)
-      names (tempdf) <- header
-      income <- rbind (income,tempdf)
-      }
-  }
-return (income)
-}
-
-bigtime <- trial.f(metro_url)
-
-
 
 
 
