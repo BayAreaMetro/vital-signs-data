@@ -18,8 +18,8 @@ county="01,13,41,55,75,81,85,95,97"
 state="06"
 metro="37980,47900,26420,33100,31080,16980,19100,35620,12060"
 
-source_residence="B19013_ACS15_1YR"
-source_work="B08521_ACS15_1YR"
+source_residence="B19013_ACS14_1YR"
+source_work="B08521_ACS14_1YR"
 
 residence_output_csv=paste0("C:/Users/sisrae.MTC/Box Sync/Data/2A_Economy/EC4_Income by Place of Residence/",ACS_year,"_")
 work_output_csv=paste0("C:/Users/sisrae.MTC/Box Sync/Data/2A_Economy/EC5_Income by Place of Work/",ACS_year,"_")
@@ -70,7 +70,7 @@ trial<-income_county %>%
 # For counties - append geography variables, apply source variables, separate residence and workplace files, and rename some variables
 
 income_county <- income_county %>% mutate (
-  Geo=sapply((strsplit(as.character(income_county$NAME),',')),function(x) x[1]),
+  Geo=sapply((strsplit(as.character(NAME),',')),function(x) x[1]),
   Year=ACS_year,
   Median_Income = as.numeric(B19013_001E),
   Median_Income_MOE = as.numeric (B19013_001M),
@@ -79,51 +79,55 @@ income_county <- income_county %>% mutate (
   Households = as.numeric(B25009_001E),
   Workers = as.numeric(B08604_001E),
   Income_x_Households = Median_Income*Households,
+  Earnings_x_Workers = Median_Earnings*Workers,
   Residence_Source = source_residence,
   Work_Source = source_work
   )
 
-bay_median = as.integer(sum(income_county$Income_x_Households)/sum(income_county$Households))
+# Calculate a Bay Area weighted average of household income/worker earnings to compare with other metros
 
-metro <- rbind(income_metro,"10" = c("Bay Area", bay_median,2,3,4,5, "NA"))
+bay_median_income = round(sum(income_county$Income_x_Households)/sum(income_county$Households))
+bay_median_earnings = round(sum(income_county$Earnings_x_Workers)/sum(income_county$Workers))
 
+income_metro <- rbind(income_metro,"10" = c("Bay Area", bay_median_income,"NA",bay_median_earnings,"NA","NA"))
+
+
+# Create separate county files for income and earnings
 
 residence_income_county <- income_county %>% 
-  select(Geo, Median_Income, Residence_Source)
-names(residence_income_county)[1]<-"Residence_Geo"
-names(residence_income_county)[3]<-"Source"
+  select(Geo, Median_Income, Median_Income_MOE, Residence_Source) %>% 
+  rename(Residence_Geo=Geo, Source=Residence_Source)
 
 workplace_earnings_county <- income_county %>% 
-  select(Geo, Median_Earnings, Work_Source)
-names(workplace_earnings)[1]<-"Workplace_Geo"
-names(workplace_earnings)[3]<-"Source"
+  select(Geo, Median_Earnings, Median_Earnings_MOE, Work_Source) %>%
+  rename(Workplace_Geo=Geo, Source=Work_Source)
 
 # For metros - append geography variables, apply source variables, separate residence and workplace files, and rename some variables
 
-income_metro$Geo <- paste(sapply((strsplit(as.character(income_metro$NAME),'-')),function(x) x[1]),"MSA")
-income_metro$Year <- ACS_year
-income_metro$Median_Income <- income_metro$B19013_001E
-income_metro$Median_Earnings <- income_metro$B08521_001E
-income_metro$Residence_Source <- source_residence
-income_metro$Work_Source <- source_work
+income_metro <- income_metro %>% mutate (
+  Geo=ifelse(NAME=="Bay Area","Bay Area",paste(sapply((strsplit(as.character(NAME),'-')),function(x) x[1]),"MSA")),
+  Year=ACS_year,
+  Median_Income = B19013_001E,
+  Median_Income_MOE = B19013_001M,
+  Median_Earnings = B08521_001E,
+  Median_Earnings_MOE = B08521_001M,
+  Residence_Source = source_residence,
+  Work_Source = source_work
+)
 
 residence_income_metro <- income_metro %>% 
-  select(Geo, Median_Income, Residence_Source)
-names(residence_income_metro)[1]<-"Residence_Geo"
-names(residence_income_metro)[3]<-"Source"
+  select(Geo, Median_Income, Median_Income_MOE, Residence_Source) %>%
+  rename(Residence_Geo=Geo,Source=Residence_Source)
 
 workplace_earnings_metro <- income_metro %>% 
-  select(Geo, Median_Earnings, Work_Source)
-names(workplace_earnings)[1]<-"Workplace_Geo"
-names(workplace_earnings)[3]<-"Source"
-
-
-
+  select(Geo, Median_Earnings, Median_Earnings_MOE, Work_Source) %>%
+  rename(Workplace_Geo=Geo,Source=Work_Source)
 
 # Write out CSV 
-
-#write.csv(residence_income , paste0(residence_output_csv, "5Year_Residence_City_Income.csv"), row.names = FALSE, quote = T)
-#write.csv(workplace_earnings , paste0(work_output_csv, "5Year_Workplace_City_Earnings.csv"), row.names = FALSE, quote = T)
+write.csv(residence_income_county, paste0(residence_output_csv, "1Year_Residence_County_Income.csv"), row.names = FALSE, quote = T)
+write.csv(residence_income_metro, paste0(residence_output_csv, "1Year_Residence_Metro_Income.csv"), row.names = FALSE, quote = T)
+write.csv(workplace_earnings_county, paste0(work_output_csv, "1Year_Workplace_County_Earnings.csv"), row.names = FALSE, quote = T)
+write.csv(workplace_earnings_metro, paste0(work_output_csv, "1Year_Workplace_Metro_Earnings.csv"), row.names = FALSE, quote = T)
 
 
 
