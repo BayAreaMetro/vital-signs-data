@@ -33,7 +33,7 @@ metro_url <- paste0("http://api.census.gov/data/",ACS_year,"/acs",
   metro,"&key=",key)
 
 # Function for bringing in data
-# Put API data into list file
+# Puts API data into list file
 # For length of list file, use first row as header
 # Create and append data to data frame. Change null values to "NA."
 
@@ -63,9 +63,6 @@ income_county <- f.income(county_url)
 # Now metros
 
 income_metro <- f.income(metro_url)
-
-trial<-income_county %>%
-  mutate (trial=as.numeric(B25009_001E))
 
 # For counties - append geography variables, apply source variables, separate residence and workplace files, and rename some variables
 
