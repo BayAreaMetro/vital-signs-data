@@ -1,5 +1,9 @@
+#affordability-rent-own-county-one-year.R
+#Script to convert Census APIs into rent/own affodability tables for region and metros
+#SI
+#08/17/16
 ################################################################
-# Variables to edit
+# Variables to edit - Begin
 
 ACS_year="2014"
 ACS_product="1"
@@ -18,6 +22,10 @@ County_Overall_csv="1Year_County_Overall.csv"
 County_byIncome_csv="1Year_County_byIncome.csv"
 Metro_csv="1Year_Metro.csv"
 
+# Filter Napa out (often table is suppressed due to too low sample for rentals)
+
+Filter_Napa = "Yes"
+
 # Census API Key
 
 key="b901231133cf7da9e4ae3dea1af2470e87b3b9e7"
@@ -33,7 +41,7 @@ library(httr)
 library(reshape2)
 '%notin%' <- Negate('%in%') # Creates function to search if an element is not within a vector, array, etc.
 
-# Import census API data for rent and earnings for place of residence and workplace, respectively.
+# Import census API data for rent and earnings for place of residence and workplace, respectively. API limit is 50, so two batches are needed.
 
 county_rent_url1 <- paste0("http://api.census.gov/data/",ACS_year,"/acs",
                      ACS_product,"?get=NAME,B25074_001E,B25074_002E,B25074_003E,B25074_004E,",
@@ -117,12 +125,6 @@ metro_own_url2 <- paste0("http://api.census.gov/data/",ACS_year,"/acs",
                           "&for=metropolitan+statistical+area/micropolitan+statistical+area:",
                           metro,"&key=",key)
                      
-#metro_rent_url <- paste0("http://api.census.gov/data/",ACS_year,"/acs",
-#                    ACS_product,"?get=NAME,B19013_001E,B19013_001M,B08521_001E,B08521_001M&for=metropolitan+statistical+area/micropolitan+statistical+area:",
-#                    metro,"&key=",key)
-
-#metro_own_url
-
 # Function for bringing in data
 # Puts API data into list file
 # For length of list file, use first row as header
@@ -154,14 +156,14 @@ county_rent2 <- f.afford(county_rent_url2)
 county_rent <- left_join(county_rent1,county_rent2,by=c("NAME", "state", "county")) %>%
   mutate(
   Geography=sapply((strsplit(as.character(NAME),',')),function(x) x[1])) %>%
-  select(-state,-county,-NAME) # %>%
-  #filter(Geography!="Napa County")
+  select(-state,-county,-NAME) %>%
+  filter(if(Filter_Napa=="Yes"){Geography!="Napa County"})
 
 county_rent_merging <- left_join(county_rent1,county_rent2,by=c("NAME", "state", "county")) %>% 
   select(-state,-county) %>% mutate(
   Geography=sapply((strsplit(as.character(NAME),',')),function(x) x[1]),
   Year=ACS_year,
-  Household_Type="Rent",
+  Household_Type="Renter",
 
   r_lt20=as.numeric(B25074_003E)+as.numeric(B25074_012E)+as.numeric(B25074_021E)+as.numeric(B25074_030E)+
     as.numeric(B25074_039E)+as.numeric(B25074_048E)+as.numeric(B25074_057E),
@@ -203,12 +205,12 @@ county_own <- left_join(county_own1,county_own2,by=c("NAME", "state", "county"))
   mutate(
     Geography=sapply((strsplit(as.character(NAME),',')),function(x) x[1])) %>%
   select(-state,-county,-NAME) %>%
-  filter(Geography!="Napa County")
+  filter(if(Filter_Napa=="Yes"){Geography!="Napa County"})
 
 county_own_merging <- left_join(county_own1,county_own2,by=c("NAME", "state", "county")) %>% mutate(
   Geography=sapply((strsplit(as.character(NAME),',')),function(x) x[1]),
   Year=ACS_year,
-  Household_Type="own",
+  Household_Type="Owner",
   
   o_lt20=as.numeric(B25095_003E)+as.numeric(B25095_012E)+as.numeric(B25095_021E)+as.numeric(B25095_030E)+
     as.numeric(B25095_039E)+as.numeric(B25095_048E)+as.numeric(B25095_057E)+as.numeric(B25095_066E),
@@ -274,8 +276,7 @@ index <- c("0k_10k","10k_19k","20k_34k","35k_49k","50k_74k","75k_99k","more_than
 values <- c("Less than $10,000", "$10,000 to $20,000","$20,000 to $35,000","$35,000 to $50,000","$50,000 to $75,000","$75,000 to $100,000","More than $100,000")
 
 
-f.byincome <- function(geo_rent,geo_own) {
-  left_join(geo_rent, geo_own,by=c("Geography")) %>%
+county_byincome_raw <- left_join(county_own, county_rent,by=c("Geography")) %>%
   melt(id.vars=c("Geography"),variable.name="Cell_Name",value.name="HH") %>% mutate(
     Table = sapply((strsplit(as.character(Cell_Name),'_')),function(x) x[1]),
     Temp = sapply((strsplit(as.character(Cell_Name),'_')),function(x) x[2]),
@@ -296,7 +297,9 @@ f.byincome <- function(geo_rent,geo_own) {
                     ifelse (Cell %in% c(7,16,25,34,43,52,61,70), "Share35to39",
                     ifelse (Cell %in% c(8,17,26,35,44,53,62,71), "Share40to49",
                     ifelse (Cell %in% c(9,18,27,36,45,54,63,72), "ShareGT50",NA)))))))
-  ) %>%
+  ) 
+
+County_byIncome <- county_byincome_raw %>%
   select(-Cell_Name,-Table,-Cell,-Temp)%>%
   group_by(Geography,Income,Share) %>%
   summarize(Tot_HH=sum(as.numeric(HH))) %>%
@@ -319,13 +322,73 @@ f.byincome <- function(geo_rent,geo_own) {
   select(Geography,Year,Income_Bracket,Income_Bracket_Label,H_Share_lessthan20percent,H_Share_20to24percent,
          H_Share_25to29percent,H_Share_30to34percent,H_Share_35to39percent,H_Share_40to49percent,H_Share_morethan50percent,
          Source1,Source2)
-  }
-
-County_byIncome <- f.byincome(county_rent,county_own) 
 
 #Now Metro Analysis
 
-#Import and join datasets to create a master dataset
+#First summarize Bay Area by income and share
+
+Region_byIncome <- county_byincome_raw %>%
+  select(-Cell_Name,-Table,-Cell,-Temp)%>%
+  group_by(Income,Share) %>%
+  summarize(Tot_HH=sum(as.numeric(HH))) %>%
+  group_by(Income) %>%
+  mutate(freq = Tot_HH/sum(Tot_HH)) %>%
+  dcast(Income~Share, value.var="freq") %>% 
+  mutate(
+    Geography="Bay Area",
+    Income_Bracket=Income,
+    Income_Bracket_Label = values[match(Income, index)],
+    H_Share_lessthan20percent = Share1_LT20,
+    H_Share_20to24percent = Share20to24,
+    H_Share_25to29percent = Share25to29,
+    H_Share_30to34percent = Share30to34,
+    H_Share_35to39percent = Share35to39,
+    H_Share_40to49percent = Share40to49,
+    H_Share_morethan50percent = ShareGT50,
+    Year=ACS_year,
+    Source1=source1,
+    Source2=source2) %>%
+  select(Geography,Year,Income_Bracket,Income_Bracket_Label,H_Share_lessthan20percent,H_Share_20to24percent,
+         H_Share_25to29percent,H_Share_30to34percent,H_Share_35to39percent,H_Share_40to49percent,H_Share_morethan50percent,
+         Source1,Source2)
+  
+#Next summarize Bay Area by just share  
+
+region_own_rent <- county_byincome_raw %>%
+  mutate(
+    Household_Type=ifelse(Table=="B25074","Renter",
+                      ifelse(Table=="B25095","Owner",NA))) %>%
+  select(-Cell_Name,-Table,-Cell,-Temp)%>%
+  group_by(Household_Type,Share) %>%
+  summarize(Tot_HH=sum(as.numeric(HH))) %>%
+  mutate(freq = Tot_HH/sum(Tot_HH)) %>%
+  dcast(Household_Type~Share, value.var="freq") 
+
+region_all <- county_byincome_raw %>%
+  select(-Cell_Name,-Table,-Cell,-Temp)%>%
+  group_by(Share) %>%
+  summarize(Tot_HH=sum(as.numeric(HH))) %>%
+  mutate(freq = Tot_HH/sum(Tot_HH), Household_Type="All")%>%
+  dcast(Household_Type~Share, value.var="freq") 
+
+Region_Overall <- rbind(region_own_rent,region_all) %>%
+  mutate(
+    Geography="Bay Area",
+    H_Share_lessthan20percent = Share1_LT20,
+    H_Share_20to24percent = Share20to24,
+    H_Share_25to29percent = Share25to29,
+    H_Share_30to34percent = Share30to34,
+    H_Share_35to39percent = Share35to39,
+    H_Share_40to49percent = Share40to49,
+    H_Share_morethan50percent = ShareGT50,
+    Year=ACS_year,
+    Source1=source1,
+    Source2=source2) %>%
+  select(Geography,Year,Household_Type,H_Share_lessthan20percent,H_Share_20to24percent,
+         H_Share_25to29percent,H_Share_30to34percent,H_Share_35to39percent,H_Share_40to49percent,H_Share_morethan50percent,
+         Source1,Source2)
+
+#Import and join datasets to create a master dataset for Metros
 
 metro_rent1 <- f.afford(metro_rent_url1) 
 metro_rent2 <- f.afford(metro_rent_url2)
@@ -350,7 +413,7 @@ for(i in 2:ncol(metro_all)) {
 
 # Create Metro categories
 
-metro_all_final <- metro_all %>% mutate(
+metro_all_nobay <- metro_all %>% mutate(
   Metro=sapply((strsplit(as.character(NAME),'-')),function(x) x[1]),
   Share1_LT20=r_03+r_12+r_21+r_30+r_39+r_48+r_57+o_03+o_12+o_21+o_30+o_39+o_48+o_57+o_66,
   Share20to24=r_04+r_13+r_22+r_31+r_40+r_49+r_58+o_04+o_13+o_22+o_31+o_40+o_49+o_58+o_67,
@@ -375,7 +438,22 @@ metro_all_final <- metro_all %>% mutate(
          H_Share_30to34percent,H_Share_35to39percent,H_Share_40to49percent,H_Share_morethan50percent,
          Source1,Source2)
 
+region_append <- Region_Overall %>%
+  filter(Household_Type=="All") %>%
+  select(-Household_Type) %>%
+  rename(Metro=Geography)
+
+Metro <- rbind(metro_all_nobay,region_append)
+
+rm(county_all, county_byincome_raw,county_own,county_own_appending,county_own1,county_own2,
+   county_rent,county_rent_appending, county_rent_merging,county_own_merging,county_rent1,
+   county_rent2,metro_all,metro_all_nobay,metro_own,metro_own1,metro_own2,metro_rent,metro_rent1,
+   metro_rent2,region_all,region_append,region_own_rent,temp_own,temp_rent)
+
 # Write out CSV 
 
-write.csv(city_rent_final, paste0(residence_output_csv, name_city_csv), row.names = FALSE, quote = T)
-write.csv(tract_rent_final, paste0(residence_output_csv, name_tract_csv), row.names = FALSE, quote = T)
+write.csv(Region_Overall, paste0(residence_output_csv, Region_Overall_csv), row.names = FALSE, quote = T)
+write.csv(Region_byIncome, paste0(residence_output_csv, Region_byIncome_csv), row.names = FALSE, quote = T)
+write.csv(County_Overall, paste0(residence_output_csv, County_Overall_csv), row.names = FALSE, quote = T)
+write.csv(County_byIncome, paste0(residence_output_csv, County_byIncome_csv), row.names = FALSE, quote = T)
+write.csv(Metro, paste0(residence_output_csv, Metro_csv), row.names = FALSE, quote = T)
