@@ -6,16 +6,16 @@
 ################################################################
 # Variables to edit
 
-ACS_year="2014"
+ACS_year="2015"
 ACS_product="1"
 county="01,13,41,55,75,81,85,95,97"
 state="06"
 metro="37980,47900,26420,33100,31080,16980,19100,35620,12060"
-source="ACS14_B25058_1YR"
+source="ACS15_B25058_1YR"
 
 # Set up destination to save
 
-output_csv=paste0("C:/Users/sisrae.MTC/Box Sync/Data/2A_Economy/EC8_Rent/2014/",ACS_year,"_")
+output_csv=paste0("C:/Users/sisrae.MTC/Box Sync/Data/2A_Economy/EC8_Rent/2015/",ACS_year,"_")
 county_csv="1Year_County_Rent.csv"
 region_csv="1Year_Region_Rent.csv"
 metro_csv="1Year_Metro_Rent.csv"
