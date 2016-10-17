@@ -12,7 +12,7 @@ library(httr)
 # Set up census variables and directories for saving final files
 
 key="b901231133cf7da9e4ae3dea1af2470e87b3b9e7"
-ACS_year="2011"
+ACS_year="2015"
 ACS_product="1"
 county="01,13,41,55,75,81,85,95,97"
 state="06"
@@ -23,8 +23,8 @@ metro="37980,47900,26420,33100,31080,16980,19100,35620,12060"
 #if 2013 or before metro data:
 # metro="37980,47900,26420,31100,31080,16980,19100,35620,12060" 
 
-source_residence="B19013_ACS11_1YR"
-source_work="B08521_ACS11_1YR"
+source_residence="B19013_ACS15_1YR"
+source_work="B08521_ACS15_1YR"
 
 residence_output_csv=paste0("C:/Users/sisrae.MTC/Box Sync/Data/2A_Economy/EC4_Income by Place of Residence/",ACS_year,"_")
 work_output_csv=paste0("C:/Users/sisrae.MTC/Box Sync/Data/2A_Economy/EC5_Income by Place of Work/",ACS_year,"_")
@@ -32,9 +32,9 @@ work_output_csv=paste0("C:/Users/sisrae.MTC/Box Sync/Data/2A_Economy/EC5_Income 
 # Import census API data for income and earnings for county and metro of work, respectively.
 
 county_url <- paste0("http://api.census.gov/data/",ACS_year,"/acs",
-  ACS_product,"?get=NAME,B19013_001E,B19013_001M,B08521_001E,B08521_001M,B25009_001E,B08604_001E&in=state:06&for=county:",county,"&key=",key)
+  ACS_product,"?get=NAME,B19013_001E,B19013_001M,B08521_001E,B08521_001M,B25009_001E,B08604_001E,B19080_001E,B19080_002E,B19080_003E,B19080_004E,B19080_005E&in=state:06&for=county:",county,"&key=",key)
 metro_url <- paste0("http://api.census.gov/data/",ACS_year,"/acs",
-  ACS_product,"?get=NAME,B19013_001E,B19013_001M,B08521_001E,B08521_001M&for=metropolitan+statistical+area/micropolitan+statistical+area:",
+  ACS_product,"?get=NAME,B19013_001E,B19013_001M,B08521_001E,B08521_001M,B19080_001E,B19080_002E,B19080_003E,B19080_004E,B19080_005E&for=metropolitan+statistical+area/micropolitan+statistical+area:",
   metro,"&key=",key)
 
 # Function for bringing in data
@@ -83,7 +83,12 @@ income_county <- income_county %>% mutate (
   Income_x_Households = Median_Income*Households,
   Earnings_x_Workers = Median_Earnings*Workers,
   Residence_Source = source_residence,
-  Work_Source = source_work
+  Work_Source = source_work,
+  Lowest_Quintile = as.numeric(B19080_001E),
+  Second_Quintile = as.numeric(B19080_002E),
+  Third_Quintile = as.numeric(B19080_003E),
+  Fourth_Quintile = as.numeric(B19080_004E),
+  Top_5th = as.numeric(B19080_005E)
   )
 
 # Calculate a Bay Area weighted average of household income/worker earnings to compare with other metros
@@ -91,13 +96,13 @@ income_county <- income_county %>% mutate (
 bay_median_income = round(sum(income_county$Income_x_Households)/sum(income_county$Households))
 bay_median_earnings = round(sum(income_county$Earnings_x_Workers)/sum(income_county$Workers))
 
-income_metro <- rbind(income_metro,"10" = c("Bay Area", bay_median_income,"NA",bay_median_earnings,"NA","NA"))
+income_metro <- rbind(income_metro,"10" = c("Bay Area", bay_median_income,"NA",bay_median_earnings,"NA","NA","NA","NA","NA","NA","NA"))
 
 
 # Create separate county files for income and earnings
 
 residence_income_county <- income_county %>% 
-  select(Geo, Median_Income, Median_Income_MOE, Residence_Source) %>% 
+  select(Geo, Median_Income, Median_Income_MOE, Lowest_Quintile, Second_Quintile, Third_Quintile, Fourth_Quintile, Top_5th, Residence_Source) %>% 
   rename(Residence_Geo=Geo, Source=Residence_Source)
 
 workplace_earnings_county <- income_county %>% 
@@ -106,7 +111,7 @@ workplace_earnings_county <- income_county %>%
 
 # For metros - append geography variables, apply source variables, separate residence and workplace files, and rename some variables
 
-income_metro <- income_metro %>% mutate (
+income_metro1 <- income_metro %>% mutate (
   Geo=ifelse(NAME=="Bay Area","Bay Area",paste(sapply((strsplit(as.character(NAME),'-')),function(x) x[1]),"MSA")),
   Year=ACS_year,
   Median_Income = B19013_001E,
@@ -114,14 +119,19 @@ income_metro <- income_metro %>% mutate (
   Median_Earnings = B08521_001E,
   Median_Earnings_MOE = B08521_001M,
   Residence_Source = source_residence,
-  Work_Source = source_work
+  Work_Source = source_work,
+  Lowest_Quintile = B19080_001E,
+  Second_Quintile = B19080_002E,
+  Third_Quintile = B19080_003E,
+  Fourth_Quintile = B19080_004E,
+  Top_5th = B19080_005E
 )
 
-residence_income_metro <- income_metro %>% 
-  select(Geo, Median_Income, Median_Income_MOE, Residence_Source) %>%
+residence_income_metro <- income_metro1 %>% 
+  select(Geo, Median_Income, Median_Income_MOE, Lowest_Quintile, Second_Quintile, Third_Quintile, Fourth_Quintile, Top_5th, Residence_Source) %>%
   rename(Residence_Geo=Geo,Source=Residence_Source)
 
-workplace_earnings_metro <- income_metro %>% 
+workplace_earnings_metro <- income_metro1 %>% 
   select(Geo, Median_Earnings, Median_Earnings_MOE, Work_Source) %>%
   rename(Workplace_Geo=Geo,Source=Work_Source)
 

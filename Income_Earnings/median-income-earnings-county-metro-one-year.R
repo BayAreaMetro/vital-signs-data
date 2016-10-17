@@ -12,7 +12,7 @@ library(httr)
 # Set up census variables and directories for saving final files
 
 key="b901231133cf7da9e4ae3dea1af2470e87b3b9e7"
-ACS_year="2011"
+ACS_year="2015"
 ACS_product="1"
 county="01,13,41,55,75,81,85,95,97"
 state="06"
@@ -23,8 +23,8 @@ metro="37980,47900,26420,33100,31080,16980,19100,35620,12060"
 #if 2013 or before metro data:
 # metro="37980,47900,26420,31100,31080,16980,19100,35620,12060" 
 
-source_residence="B19013_ACS11_1YR"
-source_work="B08521_ACS11_1YR"
+source_residence="B19013_ACS15_1YR"
+source_work="B08521_ACS15_1YR"
 
 residence_output_csv=paste0("C:/Users/sisrae.MTC/Box Sync/Data/2A_Economy/EC4_Income by Place of Residence/",ACS_year,"_")
 work_output_csv=paste0("C:/Users/sisrae.MTC/Box Sync/Data/2A_Economy/EC5_Income by Place of Work/",ACS_year,"_")
