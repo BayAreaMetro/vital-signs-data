@@ -1,7 +1,6 @@
 
 # Import Libraries
 
-library(knitr)
 suppressMessages(library(plyr))
 suppressMessages(library(dplyr))
 library(RCurl)
