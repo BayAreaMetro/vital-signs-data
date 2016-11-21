@@ -1,21 +1,21 @@
 #affordability-rent-own-county-one-year.R
 #Script to convert Census APIs into rent/own affodability tables for region and metros
 #SI
-#08/17/16
+#08/17/16, revised November 21, 2016
 ################################################################
 # Variables to edit - Begin
 
-ACS_year="2014"
+ACS_year="2015"
 ACS_product="1"
 county="01,13,41,55,75,81,85,95,97"
 state="06"
 metro="37980,47900,26420,33100,31080,16980,19100,35620,12060"
-source1="ACS14_B25074_1YR"
-source2="ACS14_B25095_1YR"
+source1="ACS15_B25074_1YR"
+source2="ACS15_B25095_1YR"
 
 # Set up destination to save
 
-residence_output_csv=paste0("C:/Users/sisrae.MTC/Box Sync/Data/2A_Economy/EC10_H/2014/",ACS_year,"_")
+residence_output_csv=paste0("C:/Users/sisrae.MTC/Box Sync/Data/3_Equity/EQ2_H (former EC10)/EC10_H/2015/",ACS_year,"_")
 Region_Overall_csv="1Year_Region_Overall.csv"
 Region_byIncome_csv="1Year_Region_byIncome.csv"
 County_Overall_csv="1Year_County_Overall.csv"

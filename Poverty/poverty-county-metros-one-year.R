@@ -1,21 +1,21 @@
 #poverty-county-metros-one-year.R
 #Script to convert Census APIs into poverty tables for region and metros
 #SI
-#08/17/16
+#08/17/16, revised November 21, 2016
 ################################################################
 # Variables to edit - Begin
 
-ACS_year="2014"
+ACS_year="2015"
 ACS_product="1"
 county="01,13,41,55,75,81,85,95,97"
 state="06"
 metro="37980,47900,26420,33100,31080,16980,19100,35620,12060"
-source="ACS14_C17002_1YR"
+source="ACS15_C17002_1YR"
 
 
 # Set up destination to save
 
-output_csv=paste0("C:/Users/sisrae.MTC/Box Sync/Data/2A_Economy/EC11_Poverty/2014/",ACS_year,"_")
+output_csv=paste0("C:/Users/sisrae.MTC/Box Sync/Data/3_Equity/EQ4_Poverty (former EC11)/2015/",ACS_year,"_")
 Region_csv="1Year_Region.csv"
 County_csv="1Year_County.csv"
 Metro_csv="1Year_Metro.csv"
