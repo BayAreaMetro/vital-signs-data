@@ -12,7 +12,7 @@ library(httr)
 # Set up census variables and directories for saving final files
 
 key="b901231133cf7da9e4ae3dea1af2470e87b3b9e7"
-ACS_year="2014"
+ACS_year="2015"
 ACS_product="5"
 city=paste0("00562,00674,01640,02252,03092,05108,05164,05290,06000,08142,08310,09066,",
 	"09892,10345,13882,14190,14736,16000,16462,16560,17610,17918,17988,",
@@ -24,11 +24,11 @@ city=paste0("00562,00674,01640,02252,03092,05108,05164,05290,06000,08142,08310,0
 	"68084,68252,68294,68364,68378,69084,70098,70280,70364,70770,72646,",
 	"73262,64140,75630,77000,78666,81204,81554,81666,83346,85922,86440,86930")
 
-source_residence="B19013_ACS14_5YR"
-source_work="B08521_ACS14_5YR"
+source_residence="B19013_ACS15_5YR"
+source_work="B08521_ACS15_5YR"
 
-residence_output_csv=paste0("C:/Users/sisrae.MTC/Box Sync/Data/2A_Economy/EC4_Income by Place of Residence/",ACS_year,"_")
-work_output_csv=paste0("C:/Users/sisrae.MTC/Box Sync/Data/2A_Economy/EC5_Income by Place of Work/",ACS_year,"_")
+residence_output_csv=paste0("C:/Users/sisrae/Box Sync/Data/2A_Economy/EC4_Income by Place of Residence/2015/",ACS_year,"_")
+work_output_csv=paste0("C:/Users/sisrae/Box Sync/Data/2A_Economy/EC5_Income by Place of Work/2015/",ACS_year,"_")
 
 # Import census API data for income and earnings for place of residence and workplace, respectively.
 

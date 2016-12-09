@@ -5,7 +5,7 @@
 ################################################################
 # Variables to edit - Begin
 
-ACS_year="2014"
+ACS_year="2015"
 ACS_product="5"
 county="01,13,41,55,75,81,85,95,97"
 state="06"
@@ -18,12 +18,12 @@ city=paste0("00562,00674,01640,02252,03092,05108,05164,05290,06000,08142,08310,0
             "58380,60102,60620,60984,62546,62980,64434,65028,65070,67000,68000,",
             "68084,68252,68294,68364,68378,69084,70098,70280,70364,70770,72646,",
             "73262,64140,75630,77000,78666,81204,81554,81666,83346,85922,86440,86930")
-source="ACS14_C17002_5YR"
+source="ACS15_C17002_5YR"
 
 
 # Set up destination to save
 
-output_csv=paste0("C:/Users/sisrae.MTC/Box Sync/Data/2A_Economy/EC11_Poverty/2014/",ACS_year,"_")
+output_csv=paste0("C:/Users/sisrae/Box Sync/Data/3_Equity/EQ4_Poverty (former EC11)/2015/",ACS_year,"_")
 City_csv="5Year_City.csv"
 Tract_csv="5Year_Tract.csv"
 
