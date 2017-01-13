@@ -18,24 +18,16 @@ city=paste0("00562,00674,01640,02252,03092,05108,05164,05290,06000,08142,08310,0
             "58380,60102,60620,60984,62546,62980,64434,65028,65070,67000,68000,",
             "68084,68252,68294,68364,68378,69084,70098,70280,70364,70770,72646,",
             "73262,64140,75630,77000,78666,81204,81554,81666,83346,85922,86440,86930")
-source1="B08301_ACS15_5YR"
-source2="B08601_ACS15_5YR"
 timesource1="B08013_ACS15_5YR"
 timesource2="B08136_ACS15_5YR"
 work_timesource1="B08536_ACS15_5YR"
-work_source1="B08601_ACS15_5YR"
+work_timesource2="B08601_ACS15_5YR"
 
 
 # Set up destination to save
 
-share_output_csv=paste0("C:/Users/sisrae/Box Sync/Data/1A_Transportation/T1_Commute Mode Share (Home)/",ACS_year,"/",ACS_year,"_")
-work_share_output_csv=paste0("C:/Users/sisrae/Box Sync/Data/1A_Transportation/T2_Commute Mode Share (Work)/",ACS_year,"/",ACS_year,"_")
 time_output_csv=paste0("C:/Users/sisrae/Box Sync/Data/1A_Transportation/T3_Commute Time (Home)/",ACS_year,"/",ACS_year,"_")
 work_time_output_csv=paste0("C:/Users/sisrae/Box Sync/Data/1A_Transportation/T4_Commute Time (Work)",ACS_year,"/",ACS_year,"_")
-
-#City_csv="5Year_City.csv"
-#Tract_csv="5Year_Tract.csv"
-
 
 # Census API Key
 
@@ -204,4 +196,160 @@ mode_work_place_share_melt2 <- mode_work_place_share_melt %>%
 # Export CSVs
 
 write.csv(mode_residence_place_share_melt2, paste0(share_output_csv, "5Year_City_Mode_Share.csv"), row.names = FALSE, quote = T)
+write.csv(mode_residence_tract_share_melt2, paste0(share_output_csv, "5Year_City_Mode_Share.csv"), row.names = FALSE, quote = T)
+write.csv(mode_work_place_share_melt2, paste0(work_share_output_csv, "5Year_City_Mode_Share.csv"), row.names = FALSE, quote = T)
+
+# Travel Time Total API Calls
+
+timeall_city_residence_url = paste0("http://api.census.gov/data/",ACS_year,"/acs",ACS_product,"?get=NAME,B08013_001E&in=state:",state,"&for=place:",city,"&key=", key)
+timesub_city_residence_url = paste0("http://api.census.gov/data/",ACS_year,"/acs",ACS_product,"?get=NAME,B08136_003E,B08136_004E,B08136_007E&in=state:",state,"&for=place:",city,"&key=", key)
+time_city_work_url = paste0("http://api.census.gov/data/",ACS_year,"/acs",ACS_product,"?get=NAME,B08536_001E,B08536_003E,B08536_004E,B08536_007E&in=state:",state,"&for=place:",city,"&key=", key)
+
+# Calculate Travel Times
+
+timeall_city_residence <- f.data(timeall_city_residence_url,2)
+names(timeall_city_residence) <-  c("Residence_Geo", "Aggregate_Minutes", "State", "Place")
+
+aggregate_aggregate_frame <- city_mode_frame %>% 
+  select(Id,Id2,Residence_Geo, Year, Workers_Est, AtHome)
+
+
+for (i in 2:2){
+  column <- sapply(city_travel_time, function(x) as.numeric(x[i]))
+  
+  city_aggregate_frame <- cbind(city_aggregate_frame, data.frame(column))
+}
+
+city_aggregate_frame <- cbind(city_aggregate_frame, timesource1, source1)
+
+names(city_aggregate_frame) <-  c("Id","Id2","Residence_Geo", "Year", "Workers_Est", "AtHome", "Total_Aggregate", "Source1", "Source2")
+
+
+
+city_aggregate_frame <- city_aggregate_frame %>%
+  mutate (NotHome = Workers_Est-AtHome) %>%
+  mutate (OverallTime_Est = Total_Aggregate / NotHome) 
+
+
+
+```
+
+
+```{r data - create new data frame for city travel time data for all modes}
+city_mean_frame <- city_aggregate_frame %>%
+  select (Id,Id2,Residence_Geo, Year, Workers_Est, OverallTime_Est, Source1, Source2)
+
+city_mean_melt <- melt(city_mean_frame, 
+                       id.vars=c("Id","Id2","Residence_Geo","Year", "Workers_Est", "Source1", "Source2"),
+                       variable.name="Transport_Mode",
+                       value.name="Time_Est"
+)
+
+city_mean_melt$Transport_Mode_Label <- values[match(city_mean_melt$Transport_Mode, index)]
+
+city_all_residence_mean_melt <- city_mean_melt[c(1,2,3,4,5,8,10,9,6,7)]
+
+#write.csv(city_all_residence_mean_melt , paste(time_output_csv, "5Year_City_Mean_Travel_Time.csv", sep = ""), row.names = FALSE, quote = T)
+```
+
+```{r mode - consume city travel time data for submodes}
+city_travel_time <- fromJSON(TIMESUB_CITY)
+city_travel_time <- city_travel_time[2:length(city_travel_time)]
+
+city_aggregate_frame <- city_mode_frame %>% 
+  select(Id,Id2,Residence_Geo, Year, Workers_Est,DAWorkers_Est, CPWorkers_Est, PTWorkers_Est, AtHome)
+
+
+for (i in 2:4){
+  column <- sapply(city_travel_time, function(x) as.numeric(x[i]))
+  
+  city_aggregate_frame <- cbind(city_aggregate_frame, data.frame(column))
+}
+
+city_aggregate_frame <- cbind(city_aggregate_frame, timesource2, source1)
+
+names(city_aggregate_frame) <-  c("Id","Id2","Residence_Geo", "Year", "Workers_Est", "DAWorkers_Est", "CPWorkers_Est", "PTWorkers_Est", "AtHome", "Drive_Alone_Aggregate","Carpool_Aggregate", "Transit_Aggregate", "Source1", "Source2")
+
+
+
+city_aggregate_frame <- city_aggregate_frame %>%
+  mutate (DATime_Est = Drive_Alone_Aggregate / DAWorkers_Est) %>%
+  mutate (CPTime_Est = Carpool_Aggregate / CPWorkers_Est) %>%
+  mutate (PTTime_Est = Transit_Aggregate / PTWorkers_Est)
+
+
+
+```
+
+
+```{r data - melt data frame for city travel time data for submodes}
+city_mean_frame <- city_aggregate_frame %>%
+  select (Id,Id2,Residence_Geo, Year, Workers_Est, DATime_Est, CPTime_Est, PTTime_Est, Source1, Source2)
+
+city_mean_melt <- melt(city_mean_frame, 
+                       id.vars=c("Id","Id2","Residence_Geo","Year", "Workers_Est", "Source1", "Source2"),
+                       variable.name="Transport_Mode",
+                       value.name="Time_Est"
+)
+
+city_mean_melt$Transport_Mode_Label <- values[match(city_mean_melt$Transport_Mode, index)]
+
+city_sub_residence_mean_melt <- city_mean_melt[c(1,2,3,4,5,8,10,9,6,7)]
+
+
+city_sum_residence_mean_melt <- rbind (city_all_residence_mean_melt,city_sub_residence_mean_melt)
+
+write.csv(city_sum_residence_mean_melt , paste(time_output_csv, "5Year_City_Mean_Travel_Time.csv", sep = ""), row.names = FALSE, quote = T)
+```
+
+```{r mode - consume work city travel time data for submodes}
+city_travel_time <- fromJSON(TIME_CITY_WORK)
+city_travel_time <- city_travel_time[2:length(city_travel_time)]
+
+work_city_aggregate_frame <- work_city_mode_frame %>% 
+  select(Id,Id2,Workplace_Geo, Year, Workers_Est,DAWorkers_Est, CPWorkers_Est, PTWorkers_Est, AtHome)
+
+
+for (i in 2:5){
+  column <- sapply(city_travel_time, function(x) as.numeric(x[i]))
+  
+  work_city_aggregate_frame <- cbind(work_city_aggregate_frame, data.frame(column))
+}
+
+work_city_aggregate_frame <- cbind(work_city_aggregate_frame, work_timesource1, work_source1)
+
+names(work_city_aggregate_frame) <-  c("Id","Id2","Workplace_Geo", "Year", "Workers_Est", "DAWorkers_Est", "CPWorkers_Est", "PTWorkers_Est", "AtHome", "Total_Aggregate", "Drive_Alone_Aggregate","Carpool_Aggregate", "Transit_Aggregate", "Source1", "Source2")
+
+
+
+work_city_aggregate_frame <- work_city_aggregate_frame %>%
+  mutate (NotHome = Workers_Est-AtHome) %>%
+  mutate (OverallTime_Est = Total_Aggregate / NotHome) %>%
+  mutate (DATime_Est = Drive_Alone_Aggregate / DAWorkers_Est) %>%
+  mutate (CPTime_Est = Carpool_Aggregate / CPWorkers_Est) %>%
+  mutate (PTTime_Est = Transit_Aggregate / PTWorkers_Est)
+
+
+
+```
+
+
+```{r data - melt data frame for work city travel time data for submodes}
+work_city_mean_frame <- work_city_aggregate_frame %>%
+  select (Id,Id2,Workplace_Geo, Year, Workers_Est, OverallTime_Est, DATime_Est, CPTime_Est, PTTime_Est, Source1, Source2)
+
+work_city_mean_melt <- melt(work_city_mean_frame, 
+                            id.vars=c("Id","Id2","Workplace_Geo","Year", "Workers_Est", "Source1", "Source2"),
+                            variable.name="Transport_Mode",
+                            value.name="Time_Est"
+)
+
+work_city_mean_melt$Transport_Mode_Label <- values[match(work_city_mean_melt$Transport_Mode, index)]
+
+work_city_mean_melt <- work_city_mean_melt[c(1,2,3,4,5,8,10,9,6,7)]
+
+
+write.csv(work_city_mean_melt , paste(time_output_csv, "5Year_Work_City_Mean_Travel_Time.csv", sep = ""), row.names = FALSE, quote = T)
+```
+
 
