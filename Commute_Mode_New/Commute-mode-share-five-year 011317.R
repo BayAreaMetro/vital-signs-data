@@ -232,9 +232,94 @@ timesub_city_residence <- f.data(timesub_city_residence_url,2) %>% mutate(
 mode_residence_place4 <- mode_residence_place3 %>% 
   select(Id,Id2,Residence_Geo, Year, Workers_Est, DAWorkers_Est, CPWorkers_Est, PTWorkers_Est, AtHome)
 
-alltime_city_residence <- merge(mode_residence_place4,timeall_city_residence,timesub_city_residence,by="Residence_Geo") %>% mutate(
+alltime_city_residence <- merge(mode_residence_place4,timeall_city_residence,by="Residence_Geo") %>% mutate(
   NotHome = Workers_Est-AtHome,
   OverallTime_Est = Aggregate_Minutes / NotHome,
+  Source1 = timesource1,
+  Source2 = source1) %>%
+  select(Id,Id2,Residence_Geo,Year,Workers_Est,OverallTime_Est,Source1,Source2)
+  
+  
+
+alltime_city_residence_melt <- melt(alltime_city_residence, 
+                       id.vars=c("Id","Id2","Residence_Geo","Year", "Workers_Est", "Source1", "Source2"),
+                       variable.name="Transport_Mode",
+                       value.name="Time_Est"
+)
+
+alltime_city_residence_melt2 <- alltime_city_residence_melt %>% mutate(
+  Transport_Mode_Label = values[match(Transport_Mode, index)]) %>%
+  select(Id,Id2,Residence_Geo,Year,Workers_Est,Transport_Mode,Transport_Mode_Label,Time_Est,Source1,Source2)
+
+subtime_city_residence <- merge(mode_residence_place4,timesub_city_residence,by="Residence_Geo") %>% mutate(
   DATime_Est = Drive_Alone_Aggregate / DAWorkers_Est,
   CPTime_Est = Carpool_Aggregate / CPWorkers_Est,
-  PTTime_Est = Transit_Aggregate / PTWorkers_Est)
+  PTTime_Est = Transit_Aggregate / PTWorkers_Est,
+  Source1=timesource2,
+  Source2=source1) %>%
+  select (Id,Id2,Residence_Geo, Year, Workers_Est, DATime_Est, CPTime_Est, PTTime_Est, Source1, Source2)
+
+
+subtime_city_residence_melt <- melt(subtime_city_residence, 
+                       id.vars=c("Id","Id2","Residence_Geo","Year", "Workers_Est", "Source1", "Source2"),
+                       variable.name="Transport_Mode",
+                       value.name="Time_Est"
+)
+
+subtime_city_residence_melt2 <- subtime_city_residence_melt %>% mutate(
+  Transport_Mode_Label = values[match(Transport_Mode, index)]) %>%
+  select(Id,Id2,Residence_Geo,Year,Workers_Est,Transport_Mode,Transport_Mode_Label,Time_Est,Source1,Source2)
+
+time_city_residence_melt <- rbind (alltime_city_residence_melt2,subtime_city_residence_melt2)
+
+# Export CSV
+
+write.csv(time_city_residence_melt, paste0(time_output_csv, "5Year_City_Mean_Travel_Time.csv"), row.names = FALSE, quote = T)
+
+# Now Work
+
+mode_work_place3 <- mode_work_place2 %>%
+  select(Id,Id2,Workplace_Geo, Year, Workers_Est,DAWorkers_Est, CPWorkers_Est, PTWorkers_Est, AtHome)
+
+time_city_work <- f.data(time_city_work_url,2) %>%
+  rename(Workplace_Geo=NAME,Total_Aggregate=B08536_001E,Drive_Alone_Aggregate=B08536_003E,Carpool_Aggregate=B08536_004E,Transit_Aggregate=B08536_007E) %>%
+  select(Workplace_Geo,Total_Aggregate,Drive_Alone_Aggregate,Carpool_Aggregate,Transit_Aggregate)
+
+work_city_aggregate_frame <- work_city_aggregate_frame %>%
+  mutate (NotHome = Workers_Est-AtHome) %>%
+  mutate (OverallTime_Est = Total_Aggregate / NotHome) %>%
+  mutate (DATime_Est = Drive_Alone_Aggregate / DAWorkers_Est) %>%
+  mutate (CPTime_Est = Carpool_Aggregate / CPWorkers_Est) %>%
+  mutate (PTTime_Est = Transit_Aggregate / PTWorkers_Est)
+
+
+
+```
+
+
+```{r data - melt data frame for work city travel time data for submodes}
+work_city_mean_frame <- work_city_aggregate_frame %>%
+  select (Id,Id2,Workplace_Geo, Year, Workers_Est, OverallTime_Est, DATime_Est, CPTime_Est, PTTime_Est, Source1, Source2)
+
+
+time_city_work_url
+
+work_city_aggregate_frame <- work_city_aggregate_frame %>%
+  mutate (NotHome = Workers_Est-AtHome) %>%
+  mutate (OverallTime_Est = Total_Aggregate / NotHome) %>%
+  mutate (DATime_Est = Drive_Alone_Aggregate / DAWorkers_Est) %>%
+  mutate (CPTime_Est = Carpool_Aggregate / CPWorkers_Est) %>%
+  mutate (PTTime_Est = Transit_Aggregate / PTWorkers_Est)
+
+work_city_mean_melt <- melt(work_city_mean_frame, 
+                            id.vars=c("Id","Id2","Workplace_Geo","Year", "Workers_Est", "Source1", "Source2"),
+                            variable.name="Transport_Mode",
+                            value.name="Time_Est"
+)
+
+work_city_mean_melt$Transport_Mode_Label <- values[match(work_city_mean_melt$Transport_Mode, index)]
+
+work_city_mean_melt <- work_city_mean_melt[c(1,2,3,4,5,8,10,9,6,7)]
+
+
+write.csv(work_city_mean_melt , paste0(time_output_csv, "5Year_City_Mean_Travel_Time.csv"), row.names = FALSE, quote = T)
