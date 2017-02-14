@@ -166,7 +166,7 @@ metro_mode_frame <- cbind(metro_mode_frame, source1)
 metro_mode_frame$cityname <- sapply((strsplit(as.character(metro_mode_frame$metro_field),'-')),function(x) x[1])
 
 
-names(metro_mode_frame) <-  c("Residence_Geo", "Year", "Workers_Est", "Drive_Total","DAWorkers_Est", "CPWorkers_Est", "PTWorkers_Est", "Walk", "Bike", "Taxi", "Motorcycle", "Other", "AtHome", "Source","Metro_Name")
+names(metro_mode_frame) <-  c("Residence_Geo", "Workers_Est", "Drive_Total","DAWorkers_Est", "CPWorkers_Est", "PTWorkers_Est", "Walk", "Bike", "Taxi", "Motorcycle", "Other", "AtHome", "Source","Metro_Name", "Year")
 
 metro_only_mode_frame <- metro_mode_frame
 metro_mode_frame <- rbind(metro_mode_frame,bay_mode_frame)
