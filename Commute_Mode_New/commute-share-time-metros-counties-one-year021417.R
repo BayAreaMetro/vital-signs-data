@@ -11,18 +11,18 @@ ACS_product="1"
 county="01,13,41,55,75,81,85,95,97"
 state="06"
 metro="37980,47900,26420,33100,31080,16980,19100,35620,12060"
-source1="B08301_ACS15_5YR"
-work_source1="B08601_ACS15_5YR"
-timesource1="C08136_ACS15_5YR"
-work_timesource1="C08536_ACS15_5YR"
+source1="B08301_ACS15_1YR"
+work_source1="B08601_ACS15_1YR"
+timesource1="C08136_ACS15_1YR"
+work_timesource1="C08536_ACS15_1YR"
 
 
 # Set up destination to save
 
-share_output_csv=paste0("C:/Users/sisrae/Box Sync/Data/1A_Transportation/T1_Commute Mode Share (Home)/",ACS_year,"/",ACS_year,"_")
-work_share_output_csv=paste0("C:/Users/sisrae/Box Sync/Data/1A_Transportation/T2_Commute Mode Share (Work)/",ACS_year,"/",ACS_year,"_")
-time_output_csv=paste0("C:/Users/sisrae/Box Sync/Data/1A_Transportation/T3_Commute Time (Home)/",ACS_year,"/",ACS_year,"_")
-work_time_output_csv=paste0("C:/Users/sisrae/Box Sync/Data/1A_Transportation/T4_Commute Time (Work)/",ACS_year,"/",ACS_year,"_")
+share_output_csv=paste0("C:/Users/sisrae/Box Sync/Data/1A_Transportation/T1-2_Commute Mode Choice/T1_Commute Mode Share (Home)/",ACS_year,"/",ACS_year,"_")
+work_share_output_csv=paste0("C:/Users/sisrae/Box Sync/Data/1A_Transportation/T1-2_Commute Mode Choice/T2_Commute Mode Share (Work)/",ACS_year,"/",ACS_year,"_")
+time_output_csv=paste0("C:/Users/sisrae/Box Sync/Data/1A_Transportation/T3-4_Commute Time/T3_Commute Time (Home)/",ACS_year,"/",ACS_year,"_")
+work_time_output_csv=paste0("C:/Users/sisrae/Box Sync/Data/1A_Transportation/T3-4_Commute Time/T4_Commute Time (Work)/",ACS_year,"/",ACS_year,"_")
 
 # Census API Key
 
