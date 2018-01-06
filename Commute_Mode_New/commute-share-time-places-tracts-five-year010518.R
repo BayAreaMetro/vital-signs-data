@@ -1,14 +1,14 @@
 #commute-share-time-places-tracts-five-year.R
 #Script to convert Census APIs into commute share tables for Bay Area places and tracts
 #SI
-#01/17/17
+#01/05/18
 #Both an aggregate time for all modes and a sub-mode table are used because suppression means only totals available in some geos.
 ################################################################
 # Variables to edit - Begin
 
-ACS_year="2015"
+ACS_year="2016"
 ACS_product="5"
-county="01,13,41,55,75,81,85,95,97"
+county="001,013,041,055,075,081,085,095,097"
 state="06"
 city=paste0("00562,00674,01640,02252,03092,05108,05164,05290,06000,08142,08310,09066,",
             "09892,10345,13882,14190,14736,16000,16462,16560,17610,17918,17988,",
@@ -19,20 +19,22 @@ city=paste0("00562,00674,01640,02252,03092,05108,05164,05290,06000,08142,08310,0
             "58380,60102,60620,60984,62546,62980,64434,65028,65070,67000,68000,",
             "68084,68252,68294,68364,68378,69084,70098,70280,70364,70770,72646,",
             "73262,64140,75630,77000,78666,81204,81554,81666,83346,85922,86440,86930")
-source1="B08301_ACS15_5YR"
-source2="B08601_ACS15_5YR"
-timesource1="B08013_ACS15_5YR"
-timesource2="B08136_ACS15_5YR"
-work_timesource1="B08536_ACS15_5YR"
-work_source1="B08601_ACS15_5YR"
+source1="B08301_ACS16_5YR"
+source2="B08601_ACS16_5YR"
+timesource1="B08013_ACS16_5YR"
+timesource2="B08136_ACS16_5YR"
+work_timesource1="B08536_ACS16_5YR"
+work_source1="B08601_ACS16_5YR"
+bins_all_source="B08303_ACS16_5YR"
+bins_mode_source="B08134_ACS16_5YR"
 
 
 # Set up destination to save
 
-share_output_csv=paste0("C:/Users/sisrae/Box Sync/Data/1A_Transportation/T1_Commute Mode Share (Home)/",ACS_year,"/",ACS_year,"_")
-work_share_output_csv=paste0("C:/Users/sisrae/Box Sync/Data/1A_Transportation/T2_Commute Mode Share (Work)/",ACS_year,"/",ACS_year,"_")
-time_output_csv=paste0("C:/Users/sisrae/Box Sync/Data/1A_Transportation/T3_Commute Time (Home)/",ACS_year,"/",ACS_year,"_")
-work_time_output_csv=paste0("C:/Users/sisrae/Box Sync/Data/1A_Transportation/T4_Commute Time (Work)/",ACS_year,"/",ACS_year,"_")
+share_output_csv=paste0("C:/Users/sisrae/Box Sync/Data/1A_Transportation/T1-2_Commute Mode Choice/T1_Commute Mode Share (Home)/",ACS_year,"/",ACS_year,"_")
+work_share_output_csv=paste0("C:/Users/sisrae/Box Sync/Data/1A_Transportation/T1-2_Commute Mode Choice/T2_Commute Mode Share (Work)/",ACS_year,"/",ACS_year,"_")
+time_output_csv=paste0("C:/Users/sisrae/Box Sync/Data/1A_Transportation/T3-4_Commute Time/T3_Commute Time (Home)/",ACS_year,"/",ACS_year,"_")
+work_time_output_csv=paste0("C:/Users/sisrae/Box Sync/Data/1A_Transportation/T3-4_Commute Time/T4_Commute Time (Work)/",ACS_year,"/",ACS_year,"_")
 
 #City_csv="5Year_City.csv"
 #Tract_csv="5Year_Tract.csv"
@@ -53,8 +55,8 @@ library(reshape2)
 
 # Create variable indices for later conversion
 
-index <- c("DriveTot_Est","DriveAlone_Est","Carpool_Est","Transit_Est","Walk_Est","Other_w_Bike_Est","Bike_Est","Other_Est","Telework_Est", "OverallTime_Est", "DATime_Est", "CPTime_Est", "PTTime_Est") # Transport_Mode index for later reference
-values <- c("Share Total Auto","Share Drive Alone","Share Carpool", "Share Transit", "Share Walk", "Share Other With Bike","Share Bike", "Share Other", "Share Work at Home", "Total Mean Travel Time", "Drive Alone Mean Travel Time", "Carpool Mean Travel Time", "Transit Mean Travel Time") #Transport_Mode_Label values for later
+index <- c("DriveTot_Est","DriveAlone_Est","Carpool_Est","Transit_Est","Walk_Est","Other_w_Bike_Est","Bike_Est","Other_Est","Telework_Est", "OverallTime_Est", "DATime_Est", "CPTime_Est", "PTTime_Est","Tot_lt20_Est","Tot_20to34_Est","Tot_35to59_Est","Tot_gt60_Est","DA_lt20_Est","DA_20to34_Est","DA_35to59_Est","DA_gt60_Est","CP_lt20_Est","CP_20to34_Est","CP_35to59_Est","CP_gt60_Est","Transit_lt20_Est","Transit_20to34_Est","Transit_35to59_Est","Transit_gt60_Est") # Transport_Mode index for later reference
+values <- c("Share Total Auto","Share Drive Alone","Share Carpool", "Share Transit", "Share Walk", "Share Other With Bike","Share Bike", "Share Other", "Share Work at Home", "Total Mean Travel Time", "Drive Alone Mean Travel Time", "Carpool Mean Travel Time", "Transit Mean Travel Time","Share Total Less Than 20 Minutes","Share Total 20 to 34 Minutes","Share Total 35 to 59 Minutes", "Share Total Greater than 60 Minutes","Share Drive Alone Less Than 20 Minutes","Share Drive Alone 20 to 34 Minutes","Share Drive Alone 35 to 59 Minutes", "Share Drive Alone Greater than 60 Minutes","Share Carpool Less Than 20 Minutes","Share Carpool 20 to 34 Minutes","Share Carpool 35 to 59 Minutes", "Share Carpool Greater than 60 Minutes","Share Transit Less Than 20 Minutes","Share Transit 20 to 34 Minutes","Share Transit 35 to 59 Minutes", "Share Transit Greater than 60 Minutes") #Transport_Mode_Label values for later
 
 
 # API Calls
@@ -62,16 +64,16 @@ values <- c("Share Total Auto","Share Drive Alone","Share Carpool", "Share Trans
 # Residence Geographies
 # Places
 
-mode_residence_place_url= paste0("http://api.census.gov/data/",ACS_year,"/acs",ACS_product,"?get=NAME,B08301_001E,B08301_002E,B08301_003E,B08301_004E,B08301_010E,B08301_019E,B08301_018E,B08301_016E,B08301_017E,B08301_020E,B08301_021E&in=state:",state,"&for=place:",city,"&key=",key)
+mode_residence_place_url= paste0("https://api.census.gov/data/",ACS_year,"/acs/acs",ACS_product,"?get=NAME,B08301_001E,B08301_002E,B08301_003E,B08301_004E,B08301_010E,B08301_019E,B08301_018E,B08301_016E,B08301_017E,B08301_020E,B08301_021E&in=state:",state,"&for=place:",city,"&key=",key)
 
 # Tracts
 
-mode_residence_tract_url = paste0("http://api.census.gov/data/",ACS_year,"/acs",ACS_product,"?get=NAME,B08301_001E,B08301_002E,B08301_003E,B08301_004E,B08301_010E,B08301_019E,B08301_018E,B08301_016E,B08301_017E,B08301_020E,B08301_021E&in=state:",state,"+county:",county,"&for=tract:*&key=",key)
+mode_residence_tract_url = paste0("https://api.census.gov/data/",ACS_year,"/acs/acs",ACS_product,"?get=NAME,B08301_001E,B08301_002E,B08301_003E,B08301_004E,B08301_010E,B08301_019E,B08301_018E,B08301_016E,B08301_017E,B08301_020E,B08301_021E&in=state:",state,"+county:",county,"&for=tract:*&key=",key)
 
 # Now Work
 # Places
 
-mode_work_place_url = paste0("http://api.census.gov/data/",ACS_year,"/acs",ACS_product,"?get=NAME,B08601_001E,B08601_002E,B08601_003E,B08601_004E,B08601_010E,B08601_019E,B08601_018E,B08601_016E,B08601_017E,B08601_020E,B08601_021E&in=state:",state,"&for=place:",city,"&key=",key)
+mode_work_place_url = paste0("https://api.census.gov/data/",ACS_year,"/acs/acs",ACS_product,"?get=NAME,B08601_001E,B08601_002E,B08601_003E,B08601_004E,B08601_010E,B08601_019E,B08601_018E,B08601_016E,B08601_017E,B08601_020E,B08601_021E&in=state:",state,"&for=place:",city,"&key=",key)
 
 # Function for bringing in data
 # Puts API data into list file
@@ -198,14 +200,32 @@ mode_work_place_share_melt <- melt(mode_work_place_share,
 
 # Travel Time Total API Calls
 
-timeall_city_residence_url = paste0("http://api.census.gov/data/",ACS_year,"/acs",ACS_product,"?get=NAME,B08013_001E&in=state:",state,"&for=place:",city,"&key=", key)
-timesub_city_residence_url = paste0("http://api.census.gov/data/",ACS_year,"/acs",ACS_product,"?get=NAME,B08136_003E,B08136_004E,B08136_007E&in=state:",state,"&for=place:",city,"&key=", key)
-time_city_work_url = paste0("http://api.census.gov/data/",ACS_year,"/acs",ACS_product,"?get=NAME,B08536_001E,B08536_003E,B08536_004E,B08536_007E&in=state:",state,"&for=place:",city,"&key=", key)
-timeall_tract_residence_url = paste0("http://api.census.gov/data/",ACS_year,"/acs",ACS_product,"?get=NAME,B08013_001E&in=state:",state,"+county:",county,"&for=tract:*&key=",key)
-timesub_tract_residence_url = paste0("http://api.census.gov/data/",ACS_year,"/acs",ACS_product,"?get=NAME,B08136_003E,B08136_004E,B08136_007E&in=state:",state,"+county:",county,"&for=tract:*&key=",key)
+timeall_city_residence_url = paste0("https://api.census.gov/data/",ACS_year,"/acs/acs",ACS_product,"?get=NAME,B08013_001E&in=state:",state,"&for=place:",city,"&key=", key)
+timesub_city_residence_url = paste0("https://api.census.gov/data/",ACS_year,"/acs/acs",ACS_product,"?get=NAME,B08136_003E,B08136_004E,B08136_007E&in=state:",state,"&for=place:",city,"&key=", key)
+time_city_work_url = paste0("https://api.census.gov/data/",ACS_year,"/acs/acs",ACS_product,"?get=NAME,B08536_001E,B08536_003E,B08536_004E,B08536_007E&in=state:",state,"&for=place:",city,"&key=", key)
+timeall_tract_residence_url = paste0("https://api.census.gov/data/",ACS_year,"/acs/acs",ACS_product,"?get=NAME,B08013_001E&in=state:",state,"+county:",county,"&for=tract:*&key=",key)
+timesub_tract_residence_url = paste0("https://api.census.gov/data/",ACS_year,"/acs/acs",ACS_product,"?get=NAME,B08136_003E,B08136_004E,B08136_007E&in=state:",state,"+county:",county,"&for=tract:*&key=",key)
+
+##Now bins
+
+all_time_bins = paste0("B08303_001E,B08303_002E,B08303_003E,B08303_004E,B08303_005E,B08303_006E,B08303_007E,B08303_008E,",
+                       "B08303_009E,B08303_010E,B08303_011E,B08303_012E,B08303_013E")
+
+mode_time_bins = paste0("B08134_021E,B08134_022E,B08134_023E,B08134_024E,B08134_025E,B08134_026E,B08134_027E,B08134_028E,",
+                        "B08134_029E,B08134_030E,B08134_031E,B08134_032E,B08134_033E,B08134_034E,B08134_035E,B08134_036E,",
+                        "B08134_037E,B08134_038E,B08134_039E,B08134_040E,B08134_061E,B08134_062E,B08134_063E,B08134_064E,",
+                        "B08134_065E,B08134_066E,B08134_067E,B08134_068E,B08134_069E,B08134_070E")
+
+
+time_residence_bins_all_place_url = paste0("https://api.census.gov/data/",ACS_year,"/acs/acs",ACS_product,"?get=NAME,",all_time_bins,"&in=state:",state,"&for=place:",city,"&key=", key)
+time_residence_bins_modes_place_url = paste0("https://api.census.gov/data/",ACS_year,"/acs/acs",ACS_product,"?get=NAME,",mode_time_bins,"&in=state:",state,"&for=place:",city,"&key=", key)
+time_residence_bins_all_tract_url = paste0("https://api.census.gov/data/",ACS_year,"/acs/acs",ACS_product,"?get=NAME,",all_time_bins,"&in=state:",state,"+county:",county,"&for=tract:*&key=",key)
+time_residence_bins_modes_tract_url = paste0("https://api.census.gov/data/",ACS_year,"/acs/acs",ACS_product,"?get=NAME,",mode_time_bins,"&in=state:",state,"+county:",county,"&for=tract:*&key=",key)
 
 
 # Calculate Travel Times
+
+## First Places
 
 timeall_city_residence <- f.data(timeall_city_residence_url,2) %>% mutate(
   Temp=sapply(strsplit(as.character(NAME),'city,'),function(x) x[1]),
@@ -261,7 +281,7 @@ subtime_city_residence_melt <- melt(subtime_city_residence,
 
 time_city_residence_melt <- rbind (alltime_city_residence_melt,subtime_city_residence_melt)
 
-# Now tracts
+## Now tracts
 
 timeall_tract_residence <- f.data(timeall_tract_residence_url,3) %>% mutate(
   Id = paste0 ("1400000US",state, county, tract),
@@ -295,7 +315,11 @@ alltime_tract_residence_melt <- melt(alltime_tract_residence,
   Transport_Mode_Label = values[match(Transport_Mode, index)]) %>%
   select(Id,Id2,County,Tract,Year,Workers_Est,Transport_Mode,Transport_Mode_Label,Time_Est,Source1,Source2)
 
-# Now Work
+alltime_tract_residence_melt <- alltime_tract_residence_melt %>% mutate(
+  Time_Est = ifelse(is.infinite(Time_Est),NA,Time_Est) # Fix census data infinite values, replacing NAs.
+)
+
+## Now Work Places
 
 mode_work_place3 <- mode_work_place2 %>%
   select(Id,Id2,Workplace_Geo, Year, Workers_Est,DAWorkers_Est, CPWorkers_Est, PTWorkers_Est, AtHome)
@@ -325,6 +349,60 @@ timeall_city_work_melt <- melt(timeall_city_work,
 ) %>% mutate(
   Transport_Mode_Label = values[match(Transport_Mode, index)])%>%
   select(Id,Id2,Workplace_Geo,Year,Workers_Est,Transport_Mode,Transport_Mode_Label,Time_Est,Source1,Source2)
+
+# Appending time bin values to residences
+
+time_residence_bins_all_place <- f.data(time_residence_bins_all_place_url,2) 
+names(time_residence_bins_all_place) <-  c("NAME", 
+                                        "Tot_tot","Tot_lt5", "Tot_5to9","Tot_10to14", "Tot_15to19","Tot_20to24",
+                                        "Tot_25to29", "Tot_30to34","Tot_35to39","Tot_40to44","Tot_45to59","Tot_60to89",
+                                        "Tot_gt90","State", "Place")
+time_residence_bins_all_place <- time_residence_bins_all_place %>% mutate(
+  temp=sapply(strsplit(as.character(NAME),'city,'),function(x) x[1]),
+  Residence_Geo=sapply(strsplit(as.character(temp),'town,'),function(x) x[1]),
+
+  Tot_lt15 = Tot_lt5+Tot_5to9+Tot_10to14,
+  Tot_15to30 = Tot_15to19+Tot_20to24+Tot_25to29,
+  Tot_30to45 = Tot_30to34+Tot_35to44,
+  Tot_45to60 = Tot_45to59, 
+  Tot_60to90 = Tot_60to89,
+  Tot_gt90 = Tot_gt90,
+  Tot_lt15_Est = Tot_lt15/Tot_tot,
+  Tot_15to30_Est = Tot_15to30/Tot_tot,
+  Tot_30to45_Est = Tot_30to45/Tot_tot,
+  Tot_45to60_Est = Tot_45to60/Tot_tot,
+  Tot_60to90_Est = Tot_60to90/Tot_tot,
+  Tot_gt90_Est = Tot_gt90/Tot_tot,
+  
+  Year = ACS_year,
+  Workers_Est = Tot_tot,
+  Id = paste0("1600000US06",Place),
+  Id2 = paste0(as.numeric(State),Place),
+  Source=bins_all_source) %>%
+  select(Residence_Geo,Id,Id2,Year,Workers_Est,Tot_lt15_Est,Tot_15to30_Est,Tot_30to45_Est,Tot_45to60_Est,Tot_60to90_Est,Tot_gt90_Est,Source)
+
+
+time_residence_bins_all_place_melt <- melt(time_residence_bins_all_place, 
+                                        id.vars=c("Residence_Geo","Year", "Workers_Est", "Source", "Id","Id2"),
+                                        variable.name="Transport_Mode",
+                                        value.name="Share_Est") %>% mutate(
+                                          Transport_Mode_Label = values[match(Transport_Mode, index)]) %>%
+  select (Id,Id2,Residence_Geo, Year, Workers_Est, Transport_Mode,Transport_Mode_Label,Share_Est, Source)
+
+
+time_residence_bins_county1 <- time_residence_bins_county %>%
+  select(Residence_Geo,Year,Workers_Est, Source,Tot_lt20_Est,Tot_20to34_Est,Tot_35to59_Est,Tot_gt60_Est,
+         DA_lt20_Est,DA_20to34_Est,DA_35to59_Est,DA_gt60_Est,
+         CP_lt20_Est,CP_20to34_Est,CP_35to59_Est,CP_gt60_Est,
+         Transit_lt20_Est,Transit_20to34_Est,Transit_35to59_Est,Transit_gt60_Est)
+
+
+time_residence_bins_county_melt <- melt(time_residence_bins_county1, 
+                                        id.vars=c("Residence_Geo","Year", "Workers_Est", "Source"),
+                                        variable.name="Transport_Mode",
+                                        value.name="Share_Est") %>% mutate(
+                                          Transport_Mode_Label = values[match(Transport_Mode, index)]) %>%
+  select (Residence_Geo, Year, Workers_Est, Transport_Mode,Transport_Mode_Label,Share_Est, Source)
 
 # Export CSVs
 

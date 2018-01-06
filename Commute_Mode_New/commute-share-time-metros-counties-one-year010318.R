@@ -1,20 +1,21 @@
 #commute-share-time-metros-counties-one-year021017.R
 #Script to convert Census APIs into commute share tables for national metros and Bay Area counties
 #SI
-#02/10/17
+#01/03/18
 #Both an aggregate time for all modes and a sub-mode table are used because suppression means only totals available in some geos.
 ################################################################
 # Variables to edit - Begin
 
-ACS_year="2015"
+ACS_year="2016"
 ACS_product="1"
-county="01,13,41,55,75,81,85,95,97"
+county="001,013,041,055,075,081,085,095,097"
 state="06"
 metro="37980,47900,26420,33100,31080,16980,19100,35620,12060"
-source1="B08301_ACS15_1YR"
-work_source1="B08601_ACS15_1YR"
-timesource1="C08136_ACS15_1YR"
-work_timesource1="C08536_ACS15_1YR"
+source1="B08301_ACS16_1YR"
+work_source1="B08601_ACS16_1YR"
+timesource1="C08136_ACS16_1YR"
+work_timesource1="C08536_ACS16_1YR"
+bins_source="C08134_ACS_16_1YR"
 
 
 # Set up destination to save
@@ -39,21 +40,22 @@ library(reshape2)
 
 # Create variable indices for later conversion
 
-index <- c("DriveTot_Est","DriveAlone_Est","Carpool_Est","Transit_Est","Walk_Est","Other_w_Bike_Est","Bike_Est","Other_Est","Telework_Est", "OverallTime_Est", "DATime_Est", "CPTime_Est", "PTTime_Est") # Transport_Mode index for later reference
-values <- c("Share Total Auto","Share Drive Alone","Share Carpool", "Share Transit", "Share Walk", "Share Other With Bike","Share Bike", "Share Other", "Share Work at Home", "Total Mean Travel Time", "Drive Alone Mean Travel Time", "Carpool Mean Travel Time", "Transit Mean Travel Time") #Transport_Mode_Label values for later
+index <- c("DriveTot_Est","DriveAlone_Est","Carpool_Est","Transit_Est","Walk_Est","Other_w_Bike_Est","Bike_Est","Other_Est","Telework_Est", "OverallTime_Est", "DATime_Est", "CPTime_Est", "PTTime_Est","Tot_lt20_Est","Tot_20to34_Est","Tot_35to59_Est","Tot_gt60_Est","DA_lt20_Est","DA_20to34_Est","DA_35to59_Est","DA_gt60_Est","CP_lt20_Est","CP_20to34_Est","CP_35to59_Est","CP_gt60_Est","Transit_lt20_Est","Transit_20to34_Est","Transit_35to59_Est","Transit_gt60_Est") # Transport_Mode index for later reference
+values <- c("Share Total Auto","Share Drive Alone","Share Carpool", "Share Transit", "Share Walk", "Share Other With Bike","Share Bike", "Share Other", "Share Work at Home", "Total Mean Travel Time", "Drive Alone Mean Travel Time", "Carpool Mean Travel Time", "Transit Mean Travel Time","Share Total Less Than 20 Minutes","Share Total 20 to 34 Minutes","Share Total 35 to 59 Minutes", "Share Total Greater than 60 Minutes","Share Drive Alone Less Than 20 Minutes","Share Drive Alone 20 to 34 Minutes","Share Drive Alone 35 to 59 Minutes", "Share Drive Alone Greater than 60 Minutes","Share Carpool Less Than 20 Minutes","Share Carpool 20 to 34 Minutes","Share Carpool 35 to 59 Minutes", "Share Carpool Greater than 60 Minutes","Share Transit Less Than 20 Minutes","Share Transit 20 to 34 Minutes","Share Transit 35 to 59 Minutes", "Share Transit Greater than 60 Minutes") #Transport_Mode_Label values for later
+
 
 
 # API Calls
 
 # Residence Geographies, Counties and Metros
 
-mode_residence_county_url= paste0("http://api.census.gov/data/",ACS_year,"/acs",ACS_product,"?get=NAME,B08301_001E,B08301_002E,B08301_003E,B08301_004E,B08301_010E,B08301_019E,B08301_018E,B08301_016E,B08301_017E,B08301_020E,B08301_021E&in=state:",state,"&for=county:",county,"&key=", key)
-mode_residence_metro_url = paste0("http://api.census.gov/data/",ACS_year,"/acs",ACS_product,"?get=NAME,B08301_001E,B08301_002E,B08301_003E,B08301_004E,B08301_010E,B08301_019E,B08301_018E,B08301_016E,B08301_017E,B08301_020E,B08301_021E&for=metropolitan+statistical+area/micropolitan+statistical+area:",metro,"&key=", key)
+mode_residence_county_url= paste0("https://api.census.gov/data/",ACS_year,"/acs/acs",ACS_product,"?get=NAME,B08301_001E,B08301_002E,B08301_003E,B08301_004E,B08301_010E,B08301_019E,B08301_018E,B08301_016E,B08301_017E,B08301_020E,B08301_021E&in=state:",state,"&for=county:",county,"&key=", key)
+mode_residence_metro_url = paste0("https://api.census.gov/data/",ACS_year,"/acs/acs",ACS_product,"?get=NAME,B08301_001E,B08301_002E,B08301_003E,B08301_004E,B08301_010E,B08301_019E,B08301_018E,B08301_016E,B08301_017E,B08301_020E,B08301_021E&for=metropolitan+statistical+area/micropolitan+statistical+area:",metro,"&key=", key)
 
-# Now Work, COunties and Metros
+# Now Work, Counties and Metros
 
-mode_work_county_url = paste0("http://api.census.gov/data/",ACS_year,"/acs",ACS_product,"?get=NAME,B08601_001E,B08601_002E,B08601_003E,B08601_004E,B08601_010E,B08601_019E,B08601_018E,B08601_016E,B08601_017E,B08601_020E,B08601_021E&in=state:",state,"&for=county:",county,"&key=", key)
-mode_work_metro_url = paste0("http://api.census.gov/data/",ACS_year,"/acs",ACS_product,"?get=NAME,B08601_001E,B08601_002E,B08601_003E,B08601_004E,B08601_010E,B08601_019E,B08601_018E,B08601_016E,B08601_017E,B08601_020E,B08601_021E&for=metropolitan+statistical+area/micropolitan+statistical+area:",metro,"&key=", key)
+mode_work_county_url = paste0("https://api.census.gov/data/",ACS_year,"/acs/acs",ACS_product,"?get=NAME,B08601_001E,B08601_002E,B08601_003E,B08601_004E,B08601_010E,B08601_019E,B08601_018E,B08601_016E,B08601_017E,B08601_020E,B08601_021E&in=state:",state,"&for=county:",county,"&key=", key)
+mode_work_metro_url = paste0("https://api.census.gov/data/",ACS_year,"/acs/acs",ACS_product,"?get=NAME,B08601_001E,B08601_002E,B08601_003E,B08601_004E,B08601_010E,B08601_019E,B08601_018E,B08601_016E,B08601_017E,B08601_020E,B08601_021E&for=metropolitan+statistical+area/micropolitan+statistical+area:",metro,"&key=", key)
 
 # Function for bringing in data
 # Puts API data into list file
@@ -230,14 +232,21 @@ mode_work_metro_share_melt <- melt(mode_work_metro_share,
 
 # Travel Time Total API Calls
 
-time_residence_county_url = paste0("http://api.census.gov/data/",ACS_year,"/acs",ACS_product,"?get=NAME,C08136_001E,C08136_002E,C08136_003E,C08136_004E&in=state:",state,"&for=county:",county,"&key=", key)
-time_work_county_url = paste0("http://api.census.gov/data/",ACS_year,"/acs",ACS_product,"?get=NAME,C08536_001E,C08536_002E,C08536_003E,C08536_004E&in=state:",state,"&for=county:",county,"&key=", key)
-time_residence_metro_url = paste0("http://api.census.gov/data/",ACS_year,"/acs",ACS_product,"?get=NAME,C08136_001E,C08136_002E,C08136_003E,C08136_004E&for=metropolitan+statistical+area/micropolitan+statistical+area:",metro,"&key=", key)
-time_work_metro_url = paste0("http://api.census.gov/data/",ACS_year,"/acs",ACS_product,"?get=NAME,C08536_001E,C08536_002E,C08536_003E,C08536_004E&for=metropolitan+statistical+area/micropolitan+statistical+area:",metro,"&key=", key)
+time_residence_county_url = paste0("https://api.census.gov/data/",ACS_year,"/acs/acs",ACS_product,"?get=NAME,C08136_001E,C08136_002E,C08136_003E,C08136_004E&in=state:",state,"&for=county:",county,"&key=", key)
+time_work_county_url = paste0("https://api.census.gov/data/",ACS_year,"/acs/acs",ACS_product,"?get=NAME,C08536_001E,C08536_002E,C08536_003E,C08536_004E&in=state:",state,"&for=county:",county,"&key=", key)
+time_residence_metro_url = paste0("https://api.census.gov/data/",ACS_year,"/acs/acs",ACS_product,"?get=NAME,C08136_001E,C08136_002E,C08136_003E,C08136_004E&for=metropolitan+statistical+area/micropolitan+statistical+area:",metro,"&key=", key)
+time_work_metro_url = paste0("https://api.census.gov/data/",ACS_year,"/acs/acs",ACS_product,"?get=NAME,C08536_001E,C08536_002E,C08536_003E,C08536_004E&for=metropolitan+statistical+area/micropolitan+statistical+area:",metro,"&key=", key)
+
+ctime_bins = paste0("C08134_001E,C08134_002E,C08134_003E,C08134_004E,C08134_005E,C08134_006E,C08134_007E,C08134_008E,C08134_009E,C08134_010E,C08134_011E,C08134_012E,C08134_013E,",
+                   "C08134_014E,C08134_015E,C08134_016E,C08134_017E,C08134_018E,C08134_019E,C08134_020E,C08134_021E,C08134_022E,C08134_023E,C08134_024E,C08134_025E,C08134_026E,",
+                   "C08134_027E,C08134_028E,C08134_029E,C08134_030E,C08134_031E,C08134_032E,C08134_033E,C08134_034E,C08134_035E,C08134_036E,C08134_037E,C08134_038E,C08134_039E,",
+                   "C08134_040E")
 
 
+time_residence_bins_county_url = paste0("https://api.census.gov/data/",ACS_year,"/acs/acs",ACS_product,"?get=NAME,",ctime_bins,"&in=state:",state,"&for=county:",county,"&key=", key)
+time_residence_bins_metro_url = paste0("https://api.census.gov/data/",ACS_year,"/acs/acs",ACS_product,"?get=NAME,",ctime_bins,"&for=metropolitan+statistical+area/micropolitan+statistical+area:",metro,"&key=", key)
 
-# Calculate Travel Times
+# Calculate average travel times (time bins for residence county and metro calculated later)
 
 # Residence County and Metro
 
@@ -369,6 +378,176 @@ time_work_metro_melt <- melt(time_work_metro2,
   Transport_Mode_Label = values[match(Transport_Mode, index)]) %>%
   select (Workplace_Geo, Metro_Name, Year, Workers_Est, Transport_Mode,Transport_Mode_Label,Time_Est, Source1, Source2)
 
+# Appending time bin values to residences
+
+time_residence_bins_county <- f.data(time_residence_bins_county_url,2) 
+names(time_residence_bins_county) <-  c("Residence_Geo", 
+                                        "Tot_tot","Tot_lt10", "Tot_10to14", "Tot_15to19", "Tot_20to24", "Tot_25to29", "Tot_30to34","Tot_35to44","Tot_45to59","Tot_gt60",
+                                        "DA_tot","DA_lt10", "DA_10to14", "DA_15to19", "DA_20to24", "DA_25to29", "DA_30to34","DA_35to44","DA_45to59","DA_gt60",
+                                        "CP_tot","CP_lt10", "CP_10to14", "CP_15to19", "CP_20to24", "CP_25to29", "CP_30to34","CP_35to44","CP_45to59","CP_gt60",
+                                        "Transit_tot","Transit_lt10", "Transit_10to14", "Transit_15to19", "Transit_20to24", "Transit_25to29", "Transit_30to34","Transit_35to44","Transit_45to59","Transit_gt60",
+                                        "State", "County")
+
+time_residence_bins_county <- time_residence_bins_county %>% mutate(
+  Tot_lt20 = Tot_lt10+Tot_10to14+Tot_15to19,
+  Tot_20to34 = Tot_20to24+Tot_25to29+Tot_30to34,
+  Tot_35to59 = Tot_35to44+Tot_45to59,
+  Tot_lt20_Est = Tot_lt20/Tot_tot,
+  Tot_20to34_Est = Tot_20to34/Tot_tot,
+  Tot_35to59_Est = Tot_35to59/Tot_tot,
+  Tot_gt60_Est = Tot_gt60/Tot_tot,
+  
+  DA_lt20 = DA_lt10+DA_10to14+DA_15to19,
+  DA_20to34 = DA_20to24+DA_25to29+DA_30to34,
+  DA_35to59 = DA_35to44+DA_45to59,
+  DA_lt20_Est = DA_lt20/DA_tot,
+  DA_20to34_Est = DA_20to34/DA_tot,
+  DA_35to59_Est = DA_35to59/DA_tot,
+  DA_gt60_Est = DA_gt60/DA_tot,
+  
+  CP_lt20 = CP_lt10+CP_10to14+CP_15to19,
+  CP_20to34 = CP_20to24+CP_25to29+CP_30to34,
+  CP_35to59 = CP_35to44+CP_45to59,
+  CP_lt20_Est = CP_lt20/CP_tot,
+  CP_20to34_Est = CP_20to34/CP_tot,
+  CP_35to59_Est = CP_35to59/CP_tot,
+  CP_gt60_Est = CP_gt60/CP_tot,
+  
+  Transit_lt20 = Transit_lt10+Transit_10to14+Transit_15to19,
+  Transit_20to34 = Transit_20to24+Transit_25to29+Transit_30to34,
+  Transit_35to59 = Transit_35to44+Transit_45to59,
+  Transit_lt20_Est = Transit_lt20/Transit_tot,
+  Transit_20to34_Est = Transit_20to34/Transit_tot,
+  Transit_35to59_Est = Transit_35to59/Transit_tot,
+  Transit_gt60_Est = Transit_gt60/Transit_tot,
+  
+  Year = ACS_year,
+  Workers_Est = Tot_tot,
+  Source=bins_source) 
+
+time_residence_bins_county1 <- time_residence_bins_county %>%
+  select(Residence_Geo,Year,Workers_Est, Source,Tot_lt20_Est,Tot_20to34_Est,Tot_35to59_Est,Tot_gt60_Est,
+         DA_lt20_Est,DA_20to34_Est,DA_35to59_Est,DA_gt60_Est,
+         CP_lt20_Est,CP_20to34_Est,CP_35to59_Est,CP_gt60_Est,
+         Transit_lt20_Est,Transit_20to34_Est,Transit_35to59_Est,Transit_gt60_Est)
+         
+
+time_residence_bins_county_melt <- melt(time_residence_bins_county1, 
+                             id.vars=c("Residence_Geo","Year", "Workers_Est", "Source"),
+                             variable.name="Transport_Mode",
+                             value.name="Share_Est") %>% mutate(
+  Transport_Mode_Label = values[match(Transport_Mode, index)]) %>%
+  select (Residence_Geo, Year, Workers_Est, Transport_Mode,Transport_Mode_Label,Share_Est, Source)
+
+# Bay Area Bins
+
+time_residence_bins_bay <- time_residence_bins_county %>%
+  summarize(
+    Residence_Geo="San Francisco Bay Area",
+    
+    Tot_tot = sum(Tot_tot),
+    Tot_lt20 = sum(Tot_lt20),
+    Tot_20to34 = sum(Tot_20to34),
+    Tot_35to59 = sum(Tot_35to59),
+    Tot_gt60 = sum(Tot_gt60),
+    
+    DA_tot = sum(DA_tot),
+    DA_lt20 = sum(DA_lt20),
+    DA_20to34 = sum(DA_20to34),
+    DA_35to59 = sum(DA_35to59),
+    DA_gt60 = sum(DA_gt60),
+    
+    CP_tot = sum(CP_tot),
+    CP_lt20 = sum(CP_lt20),
+    CP_20to34 = sum(CP_20to34),
+    CP_35to59 = sum(CP_35to59),
+    CP_gt60 = sum(CP_gt60),
+    
+    Transit_tot = sum(Transit_tot),
+    Transit_lt20 = sum(Transit_lt20),
+    Transit_20to34 = sum(Transit_20to34),
+    Transit_35to59 = sum(Transit_35to59),
+    Transit_gt60 = sum(Transit_gt60),
+    
+    Metro_Name="Bay Area")
+
+# Metro Bins
+
+time_residence_bins_metro_only <- f.data(time_residence_bins_metro_url,1) %>% mutate(
+  Metro_Name = sapply((strsplit(as.character(NAME),'-')),function(x) x[1])
+)
+
+names(time_residence_bins_metro_only) <-  c("Residence_Geo", 
+                                        "Tot_tot","Tot_lt10", "Tot_10to14", "Tot_15to19", "Tot_20to24", "Tot_25to29", "Tot_30to34","Tot_35to44","Tot_45to59","Tot_gt60",
+                                        "DA_tot","DA_lt10", "DA_10to14", "DA_15to19", "DA_20to24", "DA_25to29", "DA_30to34","DA_35to44","DA_45to59","DA_gt60",
+                                        "CP_tot","CP_lt10", "CP_10to14", "CP_15to19", "CP_20to24", "CP_25to29", "CP_30to34","CP_35to44","CP_45to59","CP_gt60",
+                                        "Transit_tot","Transit_lt10", "Transit_10to14", "Transit_15to19", "Transit_20to24", "Transit_25to29", "Transit_30to34","Transit_35to44","Transit_45to59","Transit_gt60",
+                                        "Metro_Code","Metro_Name")
+
+time_residence_bins_metro_only$Metro_Code <- NULL # Remove this field
+
+time_residence_bins_metro_only <- time_residence_bins_metro_only %>% mutate(
+
+Tot_lt20 = Tot_lt10+Tot_10to14+Tot_15to19,
+Tot_20to34 = Tot_20to24+Tot_25to29+Tot_30to34,
+Tot_35to59 = Tot_35to44+Tot_45to59,
+
+DA_lt20 = DA_lt10+DA_10to14+DA_15to19,
+DA_20to34 = DA_20to24+DA_25to29+DA_30to34,
+DA_35to59 = DA_35to44+DA_45to59,
+
+CP_lt20 = CP_lt10+CP_10to14+CP_15to19,
+CP_20to34 = CP_20to24+CP_25to29+CP_30to34,
+CP_35to59 = CP_35to44+CP_45to59,
+
+Transit_lt20 = Transit_lt10+Transit_10to14+Transit_15to19,
+Transit_20to34 = Transit_20to24+Transit_25to29+Transit_30to34,
+Transit_35to59 = Transit_35to44+Transit_45to59) %>%
+  select(Residence_Geo,Tot_tot,Tot_lt20,Tot_20to34,Tot_35to59,Tot_gt60,
+         DA_tot,DA_lt20,DA_20to34,DA_35to59,DA_gt60,
+         CP_tot,CP_lt20,CP_20to34,CP_35to59,CP_gt60,
+         Transit_tot,Transit_lt20,Transit_20to34,Transit_35to59,Transit_gt60,
+         Metro_Name
+         )
+
+time_residence_bins_metro <- rbind(time_residence_bins_metro_only,time_residence_bins_bay) %>% mutate(
+  Tot_lt20_Est = Tot_lt20/Tot_tot,
+  Tot_20to34_Est = Tot_20to34/Tot_tot,
+  Tot_35to59_Est = Tot_35to59/Tot_tot,
+  Tot_gt60_Est = Tot_gt60/Tot_tot,
+  
+  DA_lt20_Est = DA_lt20/DA_tot,
+  DA_20to34_Est = DA_20to34/DA_tot,
+  DA_35to59_Est = DA_35to59/DA_tot,
+  DA_gt60_Est = DA_gt60/DA_tot,
+  
+  CP_lt20_Est = CP_lt20/CP_tot,
+  CP_20to34_Est = CP_20to34/CP_tot,
+  CP_35to59_Est = CP_35to59/CP_tot,
+  CP_gt60_Est = CP_gt60/CP_tot,
+  
+  Transit_lt20_Est = Transit_lt20/Transit_tot,
+  Transit_20to34_Est = Transit_20to34/Transit_tot,
+  Transit_35to59_Est = Transit_35to59/Transit_tot,
+  Transit_gt60_Est = Transit_gt60/Transit_tot,
+  
+  Year = ACS_year,
+  Workers_Est = Tot_tot,
+  Source=bins_source) %>%
+  
+  select(Residence_Geo,Metro_Name, Year,Workers_Est, Source,Tot_lt20_Est,Tot_20to34_Est,Tot_35to59_Est,Tot_gt60_Est,
+       DA_lt20_Est,DA_20to34_Est,DA_35to59_Est,DA_gt60_Est,
+       CP_lt20_Est,CP_20to34_Est,CP_35to59_Est,CP_gt60_Est,
+       Transit_lt20_Est,Transit_20to34_Est,Transit_35to59_Est,Transit_gt60_Est)
+  
+time_residence_bins_metro_melt <- melt(time_residence_bins_metro, 
+                             id.vars=c("Residence_Geo", "Metro_Name","Year", "Workers_Est", "Source"),
+                             variable.name="Transport_Mode",
+                             value.name="Share_Est"
+) %>% mutate(
+  Transport_Mode_Label = values[match(Transport_Mode, index)]) %>%
+  select (Residence_Geo, Metro_Name, Year, Workers_Est, Transport_Mode,Transport_Mode_Label,Share_Est, Source)
+
 
 # Export CSVs
 
@@ -381,4 +560,7 @@ write.csv(time_residence_county_melt, paste0(time_output_csv, "1Year_County_Mean
 write.csv(time_residence_metro_melt , paste0(time_output_csv, "1Year_Metro_Mean_Travel_Time.csv"), row.names = FALSE, quote = T)
 write.csv(time_work_county_melt , paste0(work_time_output_csv, "1Year_Work_County_Mean_Travel_Time.csv"), row.names = FALSE, quote = T)
 write.csv(time_work_metro_melt , paste0(work_time_output_csv, "1Year_Metro_County_Mean_Travel_Time.csv"), row.names = FALSE, quote = T)
+
+write.csv(time_residence_bins_county_melt, paste0(time_output_csv, "1Year_County_Travel_Time_Bins.csv"), row.names = FALSE, quote = T)
+write.csv(time_residence_bins_metro_melt , paste0(time_output_csv, "1Year_Metro_Travel_Time_Bins.csv"), row.names = FALSE, quote = T)
 
