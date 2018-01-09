@@ -55,8 +55,8 @@ library(reshape2)
 
 # Create variable indices for later conversion
 
-index <- c("DriveTot_Est","DriveAlone_Est","Carpool_Est","Transit_Est","Walk_Est","Other_w_Bike_Est","Bike_Est","Other_Est","Telework_Est", "OverallTime_Est", "DATime_Est", "CPTime_Est", "PTTime_Est","Tot_lt20_Est","Tot_20to34_Est","Tot_35to59_Est","Tot_gt60_Est","DA_lt20_Est","DA_20to34_Est","DA_35to59_Est","DA_gt60_Est","CP_lt20_Est","CP_20to34_Est","CP_35to59_Est","CP_gt60_Est","Transit_lt20_Est","Transit_20to34_Est","Transit_35to59_Est","Transit_gt60_Est") # Transport_Mode index for later reference
-values <- c("Share Total Auto","Share Drive Alone","Share Carpool", "Share Transit", "Share Walk", "Share Other With Bike","Share Bike", "Share Other", "Share Work at Home", "Total Mean Travel Time", "Drive Alone Mean Travel Time", "Carpool Mean Travel Time", "Transit Mean Travel Time","Share Total Less Than 20 Minutes","Share Total 20 to 34 Minutes","Share Total 35 to 59 Minutes", "Share Total Greater than 60 Minutes","Share Drive Alone Less Than 20 Minutes","Share Drive Alone 20 to 34 Minutes","Share Drive Alone 35 to 59 Minutes", "Share Drive Alone Greater than 60 Minutes","Share Carpool Less Than 20 Minutes","Share Carpool 20 to 34 Minutes","Share Carpool 35 to 59 Minutes", "Share Carpool Greater than 60 Minutes","Share Transit Less Than 20 Minutes","Share Transit 20 to 34 Minutes","Share Transit 35 to 59 Minutes", "Share Transit Greater than 60 Minutes") #Transport_Mode_Label values for later
+index <- c("DriveTot_Est","DriveAlone_Est","Carpool_Est","Transit_Est","Walk_Est","Other_w_Bike_Est","Bike_Est","Other_Est","Telework_Est", "OverallTime_Est", "DATime_Est", "CPTime_Est", "PTTime_Est","Tot_lt15_Est","Tot_15to30_Est","Tot_30to45_Est","Tot_45to60_Est","Tot_60to90_Est","Tot_gt90_Est","DA_lt15_Est","DA_15to30_Est","DA_30to45_Est","DA_45to60_Est","DA_gt60_Est","CP_lt15_Est","CP_15to30_Est","CP_30to45_Est","CP_45to60_Est","CP_gt60_Est","Transit_lt15_Est","Transit_15to30_Est","Transit_30to45_Est","Transit_45to60_Est","Transit_gt60_Est") # Transport_Mode index for later reference
+values <- c("Share Total Auto","Share Drive Alone","Share Carpool", "Share Transit", "Share Walk", "Share Other With Bike","Share Bike", "Share Other", "Share Work at Home", "Total Mean Travel Time", "Drive Alone Mean Travel Time", "Carpool Mean Travel Time", "Transit Mean Travel Time","Share Total Less Than 15 Minutes","Share Total 15 to 29 Minutes","Share Total 30 to 44 Minutes", "Share Total 45 to 59 Minutes","Share Total 60 to 89 Minutes", "Share Total 90 Minutes and Greater","Share Drive Alone Less Than 15 Minutes","Share Drive Alone 15 to 29 Minutes","Share Drive Alone 30 to 44 Minutes", "Share Drive Alone 45 to 59 Minutes","Share Drive Alone 60 Minutes and Greater","Share Carpool Less Than 15 Minutes","Share Carpool 15 to 29 Minutes","Share Carpool 30 to 44 Minutes", "Share Carpool 45 to 59 Minutes","Share Carpool 60 Minutes and Greater","Share Transit Less Than 15 Minutes","Share Transit 15 to 29 Minutes","Share Transit 30 to 44 Minutes", "Share Transit 45 to 59 Minutes","Share Transit 60 Minutes and Greater") #Transport_Mode_Label values for later
 
 
 # API Calls
@@ -351,22 +351,48 @@ timeall_city_work_melt <- melt(timeall_city_work,
   select(Id,Id2,Workplace_Geo,Year,Workers_Est,Transport_Mode,Transport_Mode_Label,Time_Est,Source1,Source2)
 
 # Appending time bin values to residences
+## Places
 
 time_residence_bins_all_place <- f.data(time_residence_bins_all_place_url,2) 
 names(time_residence_bins_all_place) <-  c("NAME", 
                                         "Tot_tot","Tot_lt5", "Tot_5to9","Tot_10to14", "Tot_15to19","Tot_20to24",
                                         "Tot_25to29", "Tot_30to34","Tot_35to39","Tot_40to44","Tot_45to59","Tot_60to89",
                                         "Tot_gt90","State", "Place")
-time_residence_bins_all_place <- time_residence_bins_all_place %>% mutate(
-  temp=sapply(strsplit(as.character(NAME),'city,'),function(x) x[1]),
-  Residence_Geo=sapply(strsplit(as.character(temp),'town,'),function(x) x[1]),
 
+time_residence_bins_mode_place <- f.data(time_residence_bins_modes_place_url,2)
+names(time_residence_bins_mode_place) <-  c("NAME", 
+                                             "DA_tot","DA_lt10", "DA_10to14", "DA_15to19", "DA_20to24", "DA_25to29", "DA_30to34","DA_35to44","DA_45to59","DA_gt60",
+                                             "CP_tot","CP_lt10", "CP_10to14", "CP_15to19", "CP_20to24", "CP_25to29", "CP_30to34","CP_35to44","CP_45to59","CP_gt60",
+                                             "Transit_tot","Transit_lt10", "Transit_10to14", "Transit_15to19", "Transit_20to24", "Transit_25to29", "Transit_30to34","Transit_35to44","Transit_45to59","Transit_gt60",
+                                             "State", "Place")
+
+time_residence_bins_place <- left_join(time_residence_bins_all_place,time_residence_bins_mode_place, by = c("NAME", "State", "Place")) %>% mutate(
+  
   Tot_lt15 = Tot_lt5+Tot_5to9+Tot_10to14,
   Tot_15to30 = Tot_15to19+Tot_20to24+Tot_25to29,
-  Tot_30to45 = Tot_30to34+Tot_35to44,
+  Tot_30to45 = Tot_30to34+Tot_35to39+Tot_40to44,
   Tot_45to60 = Tot_45to59, 
   Tot_60to90 = Tot_60to89,
   Tot_gt90 = Tot_gt90,
+  
+  DA_lt15 = DA_lt10+DA_10to14,
+  DA_15to30 = DA_15to19+DA_20to24+DA_25to29,
+  DA_30to45 = DA_30to34+DA_35to44,
+  DA_45to60 = DA_45to59,
+  DA_gt60 = DA_gt60,
+  
+  CP_lt15 = CP_lt10+CP_10to14,
+  CP_15to30 = CP_15to19+CP_20to24+CP_25to29,
+  CP_30to45 = CP_30to34+CP_35to44,
+  CP_45to60 = CP_45to59,
+  CP_gt60 = CP_gt60,
+  
+  Transit_lt15 = Transit_lt10+Transit_10to14,
+  Transit_15to30 = Transit_15to19+Transit_20to24+Transit_25to29,
+  Transit_30to45 = Transit_30to34+Transit_35to44,
+  Transit_45to60 = Transit_45to59,
+  Transit_gt60 = Transit_gt60,
+  
   Tot_lt15_Est = Tot_lt15/Tot_tot,
   Tot_15to30_Est = Tot_15to30/Tot_tot,
   Tot_30to45_Est = Tot_30to45/Tot_tot,
@@ -374,35 +400,138 @@ time_residence_bins_all_place <- time_residence_bins_all_place %>% mutate(
   Tot_60to90_Est = Tot_60to90/Tot_tot,
   Tot_gt90_Est = Tot_gt90/Tot_tot,
   
+  DA_lt15_Est = DA_lt15/DA_tot,
+  DA_15to30_Est = DA_15to30/DA_tot,
+  DA_30to45_Est = DA_30to45/DA_tot,
+  DA_45to60_Est = DA_45to60/DA_tot,
+  DA_gt60_Est = DA_gt60/DA_tot,
+  
+  CP_lt15_Est = CP_lt15/CP_tot,
+  CP_15to30_Est = CP_15to30/CP_tot,
+  CP_30to45_Est = CP_30to45/CP_tot,
+  CP_45to60_Est = CP_45to60/CP_tot,
+  CP_gt60_Est = CP_gt60/CP_tot,
+  
+  Transit_lt15_Est = Transit_lt15/Transit_tot,
+  Transit_15to30_Est = Transit_15to30/Transit_tot,
+  Transit_30to45_Est = Transit_30to45/Transit_tot,
+  Transit_45to60_Est = Transit_45to60/Transit_tot,
+  Transit_gt60_Est = Transit_gt60/Transit_tot,
+  
+  temp=sapply(strsplit(as.character(NAME),'city,'),function(x) x[1]),
+  Residence_Geo=sapply(strsplit(as.character(temp),'town,'),function(x) x[1]),
   Year = ACS_year,
   Workers_Est = Tot_tot,
   Id = paste0("1600000US06",Place),
   Id2 = paste0(as.numeric(State),Place),
-  Source=bins_all_source) %>%
-  select(Residence_Geo,Id,Id2,Year,Workers_Est,Tot_lt15_Est,Tot_15to30_Est,Tot_30to45_Est,Tot_45to60_Est,Tot_60to90_Est,Tot_gt90_Est,Source)
+  Source1=bins_all_source,
+  Source2=bins_mode_source) %>%
+  select(Residence_Geo,Id,Id2,Year,Workers_Est,         
+         Tot_lt15_Est,Tot_15to30_Est,Tot_30to45_Est,Tot_45to60_Est,Tot_60to90_Est,Tot_gt90_Est,
+         DA_lt15_Est,DA_15to30_Est,DA_30to45_Est,DA_45to60_Est,DA_gt60_Est,
+         CP_lt15_Est,CP_15to30_Est,CP_30to45_Est,CP_45to60_Est,CP_gt60_Est,
+         Transit_lt15_Est,Transit_15to30_Est,Transit_30to45_Est,Transit_45to60_Est,Transit_gt60_Est,
+         Source1,Source2)
 
 
-time_residence_bins_all_place_melt <- melt(time_residence_bins_all_place, 
-                                        id.vars=c("Residence_Geo","Year", "Workers_Est", "Source", "Id","Id2"),
+time_residence_bins_place_melt <- melt(time_residence_bins_place, 
+                                        id.vars=c("Residence_Geo","Year", "Workers_Est", "Source1", "Source2","Id","Id2"),
                                         variable.name="Transport_Mode",
                                         value.name="Share_Est") %>% mutate(
                                           Transport_Mode_Label = values[match(Transport_Mode, index)]) %>%
-  select (Id,Id2,Residence_Geo, Year, Workers_Est, Transport_Mode,Transport_Mode_Label,Share_Est, Source)
+  select (Id,Id2,Residence_Geo, Year, Workers_Est, Transport_Mode,Transport_Mode_Label,Share_Est, Source1, Source2)
+
+## Now tracts
+
+time_residence_bins_all_tract <- f.data(time_residence_bins_all_tract_url,3) 
+names(time_residence_bins_all_tract) <-  c("NAME", 
+                                           "Tot_tot","Tot_lt5", "Tot_5to9","Tot_10to14", "Tot_15to19","Tot_20to24",
+                                           "Tot_25to29", "Tot_30to34","Tot_35to39","Tot_40to44","Tot_45to59","Tot_60to89",
+                                           "Tot_gt90","State", "County", "Tract")
+
+time_residence_bins_mode_tract <- f.data(time_residence_bins_modes_tract_url,3)
+names(time_residence_bins_mode_tract) <-  c("NAME", 
+                                            "DA_tot","DA_lt10", "DA_10to14", "DA_15to19", "DA_20to24", "DA_25to29", "DA_30to34","DA_35to44","DA_45to59","DA_gt60",
+                                            "CP_tot","CP_lt10", "CP_10to14", "CP_15to19", "CP_20to24", "CP_25to29", "CP_30to34","CP_35to44","CP_45to59","CP_gt60",
+                                            "Transit_tot","Transit_lt10", "Transit_10to14", "Transit_15to19", "Transit_20to24", "Transit_25to29", "Transit_30to34","Transit_35to44","Transit_45to59","Transit_gt60",
+                                            "State", "County", "Tract")
+
+time_residence_bins_tract <- left_join(time_residence_bins_all_tract,time_residence_bins_mode_tract, by = c("NAME", "State", "County","Tract")) %>% mutate(
+  
+  Tot_lt15 = Tot_lt5+Tot_5to9+Tot_10to14,
+  Tot_15to30 = Tot_15to19+Tot_20to24+Tot_25to29,
+  Tot_30to45 = Tot_30to34+Tot_35to39+Tot_40to44,
+  Tot_45to60 = Tot_45to59, 
+  Tot_60to90 = Tot_60to89,
+  Tot_gt90 = Tot_gt90,
+  
+  DA_lt15 = DA_lt10+DA_10to14,
+  DA_15to30 = DA_15to19+DA_20to24+DA_25to29,
+  DA_30to45 = DA_30to34+DA_35to44,
+  DA_45to60 = DA_45to59,
+  DA_gt60 = DA_gt60,
+  
+  CP_lt15 = CP_lt10+CP_10to14,
+  CP_15to30 = CP_15to19+CP_20to24+CP_25to29,
+  CP_30to45 = CP_30to34+CP_35to44,
+  CP_45to60 = CP_45to59,
+  CP_gt60 = CP_gt60,
+  
+  Transit_lt15 = Transit_lt10+Transit_10to14,
+  Transit_15to30 = Transit_15to19+Transit_20to24+Transit_25to29,
+  Transit_30to45 = Transit_30to34+Transit_35to44,
+  Transit_45to60 = Transit_45to59,
+  Transit_gt60 = Transit_gt60,
+  
+  Tot_lt15_Est = Tot_lt15/Tot_tot,
+  Tot_15to30_Est = Tot_15to30/Tot_tot,
+  Tot_30to45_Est = Tot_30to45/Tot_tot,
+  Tot_45to60_Est = Tot_45to60/Tot_tot,
+  Tot_60to90_Est = Tot_60to90/Tot_tot,
+  Tot_gt90_Est = Tot_gt90/Tot_tot,
+  
+  DA_lt15_Est = DA_lt15/DA_tot,
+  DA_15to30_Est = DA_15to30/DA_tot,
+  DA_30to45_Est = DA_30to45/DA_tot,
+  DA_45to60_Est = DA_45to60/DA_tot,
+  DA_gt60_Est = DA_gt60/DA_tot,
+  
+  CP_lt15_Est = CP_lt15/CP_tot,
+  CP_15to30_Est = CP_15to30/CP_tot,
+  CP_30to45_Est = CP_30to45/CP_tot,
+  CP_45to60_Est = CP_45to60/CP_tot,
+  CP_gt60_Est = CP_gt60/CP_tot,
+  
+  Transit_lt15_Est = Transit_lt15/Transit_tot,
+  Transit_15to30_Est = Transit_15to30/Transit_tot,
+  Transit_30to45_Est = Transit_30to45/Transit_tot,
+  Transit_45to60_Est = Transit_45to60/Transit_tot,
+  Transit_gt60_Est = Transit_gt60/Transit_tot,
+  
+  Id = paste0 ("1400000US", State, County, Tract),
+  Id2 = paste0 (as.numeric(state),County, Tract),
+  County = sapply(strsplit(NAME,','),function(x) x[2]),
+  Tract = sapply(strsplit(NAME,','),function(x) x[1]),
+  Year = ACS_year,
+  Workers_Est = Tot_tot,
+  Source1 = bins_all_source,
+  Source2 = bins_mode_source
+  ) %>%
+  select(Id,Id2,County, Tract, Year,Workers_Est,         
+         Tot_lt15_Est,Tot_15to30_Est,Tot_30to45_Est,Tot_45to60_Est,Tot_60to90_Est,Tot_gt90_Est,
+         DA_lt15_Est,DA_15to30_Est,DA_30to45_Est,DA_45to60_Est,DA_gt60_Est,
+         CP_lt15_Est,CP_15to30_Est,CP_30to45_Est,CP_45to60_Est,CP_gt60_Est,
+         Transit_lt15_Est,Transit_15to30_Est,Transit_30to45_Est,Transit_45to60_Est,Transit_gt60_Est,
+         Source1,Source2)
 
 
-time_residence_bins_county1 <- time_residence_bins_county %>%
-  select(Residence_Geo,Year,Workers_Est, Source,Tot_lt20_Est,Tot_20to34_Est,Tot_35to59_Est,Tot_gt60_Est,
-         DA_lt20_Est,DA_20to34_Est,DA_35to59_Est,DA_gt60_Est,
-         CP_lt20_Est,CP_20to34_Est,CP_35to59_Est,CP_gt60_Est,
-         Transit_lt20_Est,Transit_20to34_Est,Transit_35to59_Est,Transit_gt60_Est)
+time_residence_bins_tract_melt <- melt(time_residence_bins_tract, 
+                                       id.vars=c("Id","Id2","County","Tract","Year", "Workers_Est", "Source1", "Source2"),
+                                       variable.name="Transport_Mode",
+                                       value.name="Share_Est") %>% mutate(
+                                         Transport_Mode_Label = values[match(Transport_Mode, index)]) %>%
+  select (Id,Id2,County, Tract, Year, Workers_Est, Transport_Mode,Transport_Mode_Label,Share_Est, Source1, Source2)
 
-
-time_residence_bins_county_melt <- melt(time_residence_bins_county1, 
-                                        id.vars=c("Residence_Geo","Year", "Workers_Est", "Source"),
-                                        variable.name="Transport_Mode",
-                                        value.name="Share_Est") %>% mutate(
-                                          Transport_Mode_Label = values[match(Transport_Mode, index)]) %>%
-  select (Residence_Geo, Year, Workers_Est, Transport_Mode,Transport_Mode_Label,Share_Est, Source)
 
 # Export CSVs
 
@@ -413,4 +542,8 @@ write.csv(mode_work_place_share_melt, paste0(work_share_output_csv, "5Year_Work_
 write.csv(time_city_residence_melt, paste0(time_output_csv, "5Year_City_Mean_Travel_Time.csv"), row.names = FALSE, quote = T)
 write.csv(alltime_tract_residence_melt , paste0(time_output_csv, "5Year_Tract_Mean_Travel_Time.csv"), row.names = FALSE, quote = T)
 write.csv(timeall_city_work_melt , paste0(work_time_output_csv, "5Year_Work_City_Mean_Travel_Time.csv"), row.names = FALSE, quote = T)
+
+write.csv(time_residence_bins_place_melt, paste0(time_output_csv, "5Year_City_Travel_Time_Bins.csv"), row.names = FALSE, quote = T)
+write.csv(time_residence_bins_tract_melt, paste0(time_output_csv, "5Year_Tract_Travel_Time_Bins.csv"), row.names = FALSE, quote = T)
+
 
